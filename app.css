@@ -1,0 +1,19 @@
+/* Basic Tailwind-like utility classes for web */
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* Golf score colors */
+.text-golf-eagle { color: #22c55e; }
+.text-golf-birdie { color: #84cc16; }
+.text-golf-par { color: #eab308; }
+.text-golf-bogey { color: #f97316; }
+.text-golf-double { color: #ef4444; }
+.text-golf-triple { color: #991b1b; }
+
+.bg-golf-eagle { background-color: #22c55e; }
+.bg-golf-birdie { background-color: #84cc16; }
+.bg-golf-par { background-color: #eab308; }
+.bg-golf-bogey { background-color: #f97316; }
+.bg-golf-double { background-color: #ef4444; }
+.bg-golf-triple { background-color: #991b1b; }
