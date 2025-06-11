@@ -10,6 +10,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
+  const getRedirectUrl = () => {
+    // Always use the current origin, whether localhost or production
+    if (typeof window !== 'undefined') {
+      return `${window.location.origin}/auth/callback`
+    }
+    return '/auth/callback'
+  }
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -22,10 +30,13 @@ export default function LoginPage() {
     setMessage('')
 
     try {
+      const redirectUrl = getRedirectUrl()
+      console.log('Redirect URL:', redirectUrl) // For debugging
+      
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: redirectUrl,
         },
       })
 
@@ -36,16 +47,17 @@ export default function LoginPage() {
       }
     } catch (error) {
       setMessage('An unexpected error occurred')
+      console.error('Login error:', error)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
       <div className="max-w-md w-full card">
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold mb-4">
+          <h1 className="text-3xl font-bold mb-4 text-gray-900">
             🏌️ Welcome Back
           </h1>
           <p className="text-gray-600">
@@ -54,8 +66,8 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
-          <div>
-            <label htmlFor="email" className="block font-bold mb-4">
+          <div className="form-group">
+            <label htmlFor="email" className="form-label">
               Email Address
             </label>
             <input
@@ -66,14 +78,15 @@ export default function LoginPage() {
               placeholder="Enter your email"
               className="input"
               disabled={loading}
+              required
             />
           </div>
 
           {message && (
-            <div className={`p-4 rounded ${
+            <div className={`alert ${
               message.includes('Error') 
-                ? 'bg-red-50 border' 
-                : 'bg-green-50 border'
+                ? 'alert-error' 
+                : 'alert-success'
             }`}>
               {message}
             </div>
@@ -88,21 +101,21 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-4 text-center">
+        <div className="mt-6 text-center">
           <p className="text-gray-600 mb-4">
             Don't have an account?{' '}
             <Link href="/auth/signup" className="text-blue-600">
               Sign up here
             </Link>
           </p>
-          <Link href="/" className="text-gray-600">
+          <Link href="/" className="text-blue-600">
             ← Back to Home
           </Link>
         </div>
 
-        <div className="mt-4 p-4 bg-gray-100 rounded">
-          <h3 className="font-bold mb-4">How it works:</h3>
-          <ul className="text-gray-600">
+        <div className="mt-6 p-4 bg-gray-100 rounded-lg">
+          <h3 className="font-bold mb-2 text-gray-900">How it works:</h3>
+          <ul className="text-gray-600 space-y-1">
             <li>• Enter your email address</li>
             <li>• We'll send you a secure login link</li>
             <li>• Click the link to sign in instantly</li>
