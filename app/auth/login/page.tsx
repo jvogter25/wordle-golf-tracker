@@ -42,10 +42,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="max-w-md w-full card">
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold mb-4">
             🏌️ Welcome Back
           </h1>
           <p className="text-gray-600">
@@ -55,7 +55,7 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="email" className="block font-bold mb-4">
               Email Address
             </label>
             <input
@@ -64,16 +64,16 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="input"
               disabled={loading}
             />
           </div>
 
           {message && (
-            <div className={`p-4 rounded-lg text-sm ${
+            <div className={`p-4 rounded ${
               message.includes('Error') 
-                ? 'bg-red-50 text-red-700 border border-red-200' 
-                : 'bg-green-50 text-green-700 border border-green-200'
+                ? 'bg-red-50 border' 
+                : 'bg-green-50 border'
             }`}>
               {message}
             </div>
@@ -82,27 +82,27 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary-500 text-white py-3 px-4 rounded-lg font-semibold hover:bg-primary-600 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="btn btn-primary w-full"
           >
             {loading ? 'Sending...' : 'Send Magic Link'}
           </button>
         </form>
 
-        <div className="mt-8 text-center">
-          <p className="text-gray-600 text-sm">
+        <div className="mt-4 text-center">
+          <p className="text-gray-600 mb-4">
             Don't have an account?{' '}
-            <Link href="/auth/signup" className="text-primary-500 hover:text-primary-600 font-medium">
+            <Link href="/auth/signup" className="text-blue-600">
               Sign up here
             </Link>
           </p>
-          <Link href="/" className="text-gray-500 hover:text-gray-700 text-sm font-medium">
+          <Link href="/" className="text-gray-600">
             ← Back to Home
           </Link>
         </div>
 
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <h3 className="text-sm font-medium text-blue-900 mb-2">How it works:</h3>
-          <ul className="text-xs text-blue-700 space-y-1">
+        <div className="mt-4 p-4 bg-gray-100 rounded">
+          <h3 className="font-bold mb-4">How it works:</h3>
+          <ul className="text-gray-600">
             <li>• Enter your email address</li>
             <li>• We'll send you a secure login link</li>
             <li>• Click the link to sign in instantly</li>
