@@ -69,7 +69,7 @@ export const createBirthdayTournaments = async (groupId: string, year: number) =
   const birthdayTournaments = []
 
   for (const member of members) {
-    const profile = member.profiles
+    const profile = member.profiles as any
     if (!profile.birth_month || !profile.birth_day) continue
 
     // Get user preferences for this group
@@ -108,7 +108,7 @@ export const createBirthdayTournaments = async (groupId: string, year: number) =
       tournament_type: 'birthday' as const,
       year,
       start_date: formatDate(tournamentStart),
-      end_date: formatDate(addDays(formatDate(tournamentStart), 6)),
+      end_date: addDays(formatDate(tournamentStart), 6),
       venue: `${profile.display_name}'s Home Course`,
       is_active: false,
       birthday_user_id: profile.id,

@@ -1,12 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    appDir: true,
-  },
-  env: {
-    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
-    EXPO_PUBLIC_SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
-  },
+  // App Router is now stable in Next.js 14 - no experimental flag needed
+  // NEXT_PUBLIC_ environment variables are automatically available in the browser
 }
 
 module.exports = nextConfig 
