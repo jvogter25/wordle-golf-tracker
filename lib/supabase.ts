@@ -2,8 +2,9 @@ import 'react-native-url-polyfill/auto'
 import { createClient } from '@supabase/supabase-js'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
+// Temporarily hardcoded for testing
+const supabaseUrl = 'https://xneavnttdgrpltmmldit.supabase.co'
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuZWF2bnR0ZGdycGx0bW1sZGl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2NTk3ODksImV4cCI6MjA2NTIzNTc4OX0.2T3VMVWWn7g-m8iYcoHq8r5ZkM8rWtLEZ2RXWttw3AA'
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -112,4 +113,4 @@ export interface BirthdayTournamentPreferences {
   preferred_week_offset: number
   preferred_advantage: number
   created_at: string
-} 
+}
