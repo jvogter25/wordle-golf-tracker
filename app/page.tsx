@@ -1,7 +1,48 @@
+'use client'
+
 import React from 'react'
 import Link from 'next/link'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function HomePage() {
+  const { user, loading, signOut } = useAuth()
+
+  const ProtectedLink = ({ href, className, children, requireAuth = true }: {
+    href: string
+    className: string
+    children: React.ReactNode
+    requireAuth?: boolean
+  }) => {
+    if (requireAuth && !user && !loading) {
+      return (
+        <Link 
+          href="/auth/login" 
+          className={className}
+          title="Sign in required"
+        >
+          {children}
+        </Link>
+      )
+    }
+    
+    return (
+      <Link href={href} className={className}>
+        {children}
+      </Link>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-8">
@@ -14,20 +55,43 @@ export default function HomePage() {
             Transform your family's daily Wordle into an exciting golf competition with tournaments and handicaps
           </p>
           <div className="flex justify-center space-x-4">
-            <Link 
-              href="/auth/login" 
-              className="bg-primary-500 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-primary-600 transition-colors"
-            >
-              Get Started
-            </Link>
-            <Link 
+            {user ? (
+              <ProtectedLink 
+                href="/groups" 
+                className="bg-primary-500 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-primary-600 transition-colors"
+                requireAuth={false}
+              >
+                View My Groups
+              </ProtectedLink>
+            ) : (
+              <Link 
+                href="/auth/login" 
+                className="bg-primary-500 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-primary-600 transition-colors"
+              >
+                Get Started
+              </Link>
+            )}
+            <ProtectedLink 
               href="/groups" 
               className="bg-white text-primary-500 border border-primary-500 px-8 py-3 rounded-lg text-lg font-semibold hover:bg-primary-50 transition-colors"
+              requireAuth={false}
             >
-              View Groups
-            </Link>
+              {user ? 'All Groups' : 'View Groups'}
+            </ProtectedLink>
           </div>
         </div>
+
+        {/* User Status */}
+        {user && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-8 text-center">
+            <p className="text-green-800">
+              Welcome back, <strong>{user.email}</strong>! 
+              <Link href="/profile" className="ml-2 text-green-600 hover:text-green-800 underline">
+                View Profile
+              </Link>
+            </p>
+          </div>
+        )}
 
         {/* Features */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
@@ -105,37 +169,49 @@ export default function HomePage() {
 
         {/* Navigation Links */}
         <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <Link 
+          <ProtectedLink 
             href="/groups" 
             className="bg-blue-500 text-white p-4 rounded-lg text-center font-semibold hover:bg-blue-600 transition-colors"
           >
             👥 Groups
-          </Link>
-          <Link 
+          </ProtectedLink>
+          <ProtectedLink 
             href="/submit" 
             className="bg-green-500 text-white p-4 rounded-lg text-center font-semibold hover:bg-green-600 transition-colors"
           >
             ➕ Submit Score
-          </Link>
-          <Link 
+          </ProtectedLink>
+          <ProtectedLink 
             href="/leaderboard" 
             className="bg-yellow-500 text-white p-4 rounded-lg text-center font-semibold hover:bg-yellow-600 transition-colors"
           >
             🏆 Leaderboard
-          </Link>
-          <Link 
+          </ProtectedLink>
+          <ProtectedLink 
             href="/tournaments" 
             className="bg-purple-500 text-white p-4 rounded-lg text-center font-semibold hover:bg-purple-600 transition-colors"
           >
             🎯 Tournaments
-          </Link>
-          <Link 
+          </ProtectedLink>
+          <ProtectedLink 
             href="/profile" 
             className="bg-gray-500 text-white p-4 rounded-lg text-center font-semibold hover:bg-gray-600 transition-colors"
           >
             👤 Profile
-          </Link>
+          </ProtectedLink>
         </div>
+
+        {/* Sign out option for authenticated users */}
+        {user && (
+          <div className="text-center mt-8">
+            <button
+              onClick={signOut}
+              className="text-gray-500 hover:text-gray-700 underline"
+            >
+              Sign Out
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
