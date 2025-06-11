@@ -1,3 +1,4 @@
+// Force rebuild for Vercel styling fix
 'use client'
 
 import React, { useState } from 'react'
