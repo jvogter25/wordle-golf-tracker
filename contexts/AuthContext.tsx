@@ -31,24 +31,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!mounted) return
 
+    let isMounted = true
+
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.error('Error getting initial session:', error)
+        } else {
+          console.log('Initial session:', session ? 'Found' : 'None')
+        }
+        
+        if (isMounted) {
+          setSession(session)
+          setUser(session?.user ?? null)
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('Unexpected error getting session:', error)
+        if (isMounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    getInitialSession()
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setSession(session)
-        setUser(session?.user ?? null)
-        setLoading(false)
+        console.log('Auth state change:', event, session ? 'Session exists' : 'No session')
+        
+        if (isMounted) {
+          setSession(session)
+          setUser(session?.user ?? null)
+          setLoading(false)
+        }
       }
     )
 
     // Set up automatic session refresh every 12 hours (for 48-hour sessions)
     const refreshInterval = setInterval(async () => {
+      if (!isMounted) return
+      
       const status = await getSessionStatus()
       if (status.isValid && status.timeUntilExpiry < 6 * 60 * 60 * 1000) { // If less than 6 hours left
         console.log('Refreshing session automatically...')
@@ -57,6 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, 12 * 60 * 60 * 1000) // Check every 12 hours
 
     return () => {
+      isMounted = false
       subscription.unsubscribe()
       clearInterval(refreshInterval)
     }
@@ -64,6 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      console.log('Signing out...')
       await supabase.auth.signOut()
     } catch (error) {
       console.error('Error signing out:', error)
@@ -79,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Don't render anything until mounted on client
   if (!mounted) {
-    return <div className="min-h-screen bg-blue-50 flex items-center justify-center">
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="text-xl text-gray-600">Loading...</div>
     </div>
   }
