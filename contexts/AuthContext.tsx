@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { Session, User } from '@supabase/supabase-js'
-import { supabase } from '../lib/supabase'
+import { supabase, refreshSession, getSessionStatus } from '../lib/supabase'
 
 interface AuthContextType {
   user: User | null
@@ -47,7 +47,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     )
 
-    return () => subscription.unsubscribe()
+    // Set up automatic session refresh every 30 minutes
+    const refreshInterval = setInterval(async () => {
+      const status = await getSessionStatus()
+      if (status.isValid && status.timeUntilExpiry < 60 * 60 * 1000) { // If less than 1 hour left
+        console.log('Refreshing session automatically...')
+        await refreshSession()
+      }
+    }, 30 * 60 * 1000) // Check every 30 minutes
+
+    return () => {
+      subscription.unsubscribe()
+      clearInterval(refreshInterval)
+    }
   }, [mounted])
 
   const signOut = async () => {

@@ -34,8 +34,44 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
+    storageKey: 'wordle-golf-session',
+    flowType: 'pkce'
   },
+  global: {
+    headers: {
+      'X-Client-Info': 'wordle-golf-tracker'
+    }
+  }
 })
+
+// Session management utilities
+export const refreshSession = async () => {
+  try {
+    const { data, error } = await supabase.auth.refreshSession()
+    if (error) {
+      console.log('Session refresh error:', error.message)
+      return false
+    }
+    return true
+  } catch (error) {
+    console.log('Session refresh failed:', error)
+    return false
+  }
+}
+
+export const getSessionStatus = async () => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    return {
+      isValid: !!session,
+      expiresAt: session?.expires_at,
+      refreshToken: session?.refresh_token,
+      timeUntilExpiry: session?.expires_at ? (session.expires_at * 1000) - Date.now() : 0
+    }
+  } catch (error) {
+    return { isValid: false, expiresAt: null, refreshToken: null, timeUntilExpiry: 0 }
+  }
+}
 
 // Database types
 export interface Profile {
