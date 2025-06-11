@@ -33,55 +33,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     let isMounted = true
 
-    // Get initial session
-    const getInitialSession = async () => {
+    const initializeAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession()
+        // Get initial session
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession()
         
         if (error) {
           console.error('Error getting initial session:', error)
+        } else if (initialSession && isMounted) {
+          console.log('Initial session found:', initialSession.user.email)
+          setSession(initialSession)
+          setUser(initialSession.user)
         } else {
-          console.log('Initial session:', session ? 'Found' : 'None')
-        }
-        
-        if (isMounted) {
-          setSession(session)
-          setUser(session?.user ?? null)
-          setLoading(false)
+          console.log('No initial session found')
         }
       } catch (error) {
-        console.error('Unexpected error getting session:', error)
+        console.error('Error in initializeAuth:', error)
+      } finally {
         if (isMounted) {
           setLoading(false)
         }
       }
     }
 
-    getInitialSession()
+    initializeAuth()
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state change:', event, session ? 'Session exists' : 'No session')
+      async (event, newSession) => {
+        console.log('Auth state change:', event, newSession?.user?.email || 'no user')
         
-        if (isMounted) {
-          setSession(session)
-          setUser(session?.user ?? null)
-          setLoading(false)
+        if (!isMounted) return
+
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (newSession) {
+            setSession(newSession)
+            setUser(newSession.user)
+            console.log('User signed in:', newSession.user.email)
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setSession(null)
+          setUser(null)
+          console.log('User signed out')
         }
+        
+        setLoading(false)
       }
     )
 
-    // Set up automatic session refresh every 12 hours (for 48-hour sessions)
+    // Auto-refresh session every 30 minutes
     const refreshInterval = setInterval(async () => {
       if (!isMounted) return
       
       const status = await getSessionStatus()
-      if (status.isValid && status.timeUntilExpiry < 6 * 60 * 60 * 1000) { // If less than 6 hours left
-        console.log('Refreshing session automatically...')
+      if (status.isValid && status.timeUntilExpiry < 12 * 60 * 60 * 1000) { // 12 hours
+        console.log('Auto-refreshing session')
         await refreshSession()
       }
-    }, 12 * 60 * 60 * 1000) // Check every 12 hours
+    }, 30 * 60 * 1000) // 30 minutes
 
     return () => {
       isMounted = false
@@ -92,29 +101,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      console.log('Signing out...')
-      await supabase.auth.signOut()
+      setLoading(true)
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('Error signing out:', error)
+      } else {
+        setSession(null)
+        setUser(null)
+        console.log('Successfully signed out')
+      }
     } catch (error) {
-      console.error('Error signing out:', error)
+      console.error('Unexpected error during sign out:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const value = {
-    user,
-    session,
-    loading,
-    signOut,
-  }
-
-  // Don't render anything until mounted on client
+  // Don't render children until mounted to prevent hydration issues
   if (!mounted) {
-    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-xl text-gray-600">Loading...</div>
-    </div>
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="spinner"></div>
+      </div>
+    )
   }
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ user, session, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   )
