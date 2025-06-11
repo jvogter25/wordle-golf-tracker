@@ -1,73 +1,118 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 
 export default function AuthCallbackPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const [error, setError] = useState<string | null>(null)
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
+  const [message, setMessage] = useState('')
 
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // Handle the auth callback from the URL
-        const { data, error } = await supabase.auth.getSession()
+        // Get the current URL hash and search params
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        const searchParams = new URLSearchParams(window.location.search)
         
+        // Check for error in URL
+        const error = hashParams.get('error') || searchParams.get('error')
         if (error) {
-          console.error('Auth callback error:', error)
-          setError(error.message)
-          setTimeout(() => router.push('/auth/login?error=callback'), 3000)
+          console.error('Auth error from URL:', error)
+          setStatus('error')
+          setMessage(`Authentication failed: ${error}`)
+          setTimeout(() => router.push('/auth/login'), 3000)
           return
         }
 
-        if (data.session) {
-          console.log('Authentication successful:', data.session.user.email)
-          // Successful authentication - redirect to groups
-          router.push('/groups')
-        } else {
-          // Try to exchange the code from URL params
-          const code = searchParams.get('code')
-          if (code) {
-            const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-            
-            if (exchangeError) {
-              console.error('Code exchange error:', exchangeError)
-              setError(exchangeError.message)
-              setTimeout(() => router.push('/auth/login?error=exchange'), 3000)
-              return
-            }
-
-            if (sessionData.session) {
-              console.log('Code exchange successful:', sessionData.session.user.email)
-              router.push('/groups')
-              return
-            }
-          }
+        // Check for access token in hash (magic link flow)
+        const accessToken = hashParams.get('access_token')
+        const refreshToken = hashParams.get('refresh_token')
+        
+        if (accessToken && refreshToken) {
+          // Set the session using the tokens from the URL
+          const { data, error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          })
           
-          // No session and no code - redirect to login
-          console.log('No session found, redirecting to login')
-          router.push('/auth/login')
+          if (sessionError) {
+            console.error('Session error:', sessionError)
+            setStatus('error')
+            setMessage('Failed to establish session')
+            setTimeout(() => router.push('/auth/login'), 3000)
+            return
+          }
+
+          if (data.session) {
+            console.log('Magic link authentication successful:', data.session.user.email)
+            setStatus('success')
+            setMessage('Successfully signed in!')
+            setTimeout(() => router.push('/groups'), 1000)
+            return
+          }
         }
+
+        // Fallback: try to get existing session
+        const { data: sessionData, error: getSessionError } = await supabase.auth.getSession()
+        
+        if (getSessionError) {
+          console.error('Get session error:', getSessionError)
+          setStatus('error')
+          setMessage('Failed to verify session')
+          setTimeout(() => router.push('/auth/login'), 3000)
+          return
+        }
+
+        if (sessionData.session) {
+          console.log('Existing session found:', sessionData.session.user.email)
+          setStatus('success')
+          setMessage('Already signed in!')
+          setTimeout(() => router.push('/groups'), 1000)
+          return
+        }
+
+        // No valid session found
+        console.log('No valid session, redirecting to login')
+        setStatus('error')
+        setMessage('No valid authentication found')
+        setTimeout(() => router.push('/auth/login'), 2000)
+        
       } catch (error) {
         console.error('Unexpected error in auth callback:', error)
-        setError('An unexpected error occurred')
-        setTimeout(() => router.push('/auth/login?error=unexpected'), 3000)
+        setStatus('error')
+        setMessage('An unexpected error occurred')
+        setTimeout(() => router.push('/auth/login'), 3000)
       }
     }
 
-    handleAuthCallback()
-  }, [router, searchParams])
+    // Small delay to ensure URL is fully loaded
+    const timer = setTimeout(handleAuthCallback, 100)
+    return () => clearTimeout(timer)
+  }, [router])
 
-  if (error) {
+  if (status === 'error') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-md p-6">
           <div className="text-red-500 text-6xl mb-4">⚠️</div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Authentication Error</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
+          <p className="text-gray-600 mb-4">{message}</p>
           <p className="text-sm text-gray-500">Redirecting to login page...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (status === 'success') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md p-6">
+          <div className="text-green-500 text-6xl mb-4">✅</div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Success!</h2>
+          <p className="text-gray-600 mb-4">{message}</p>
+          <p className="text-sm text-gray-500">Redirecting to your groups...</p>
         </div>
       </div>
     )
@@ -75,8 +120,8 @@ export default function AuthCallbackPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
+      <div className="text-center p-6">
+        <div className="spinner mx-auto mb-4"></div>
         <h2 className="text-xl font-semibold text-gray-900 mb-2">Signing you in...</h2>
         <p className="text-gray-600">Please wait while we verify your account.</p>
       </div>
