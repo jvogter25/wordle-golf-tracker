@@ -1,30 +1,28 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { Link } from 'expo-router'
 
-export default function LoginPage() {
-  const handleDemoLogin = () => {
-    Alert.alert('Demo Mode', 'This is a demo version. Full authentication coming soon!')
-  }
-
+export default function HomePage() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>🏌️ Wordle Golf Tracker</Text>
-      <Text style={styles.subtitle}>Sign in to your family group</Text>
+      <Text style={styles.subtitle}>Family Competition Made Easy</Text>
       
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={handleDemoLogin}>
-          <Text style={styles.buttonText}>Demo Login</Text>
-        </TouchableOpacity>
+        <Link href="/auth/login" asChild>
+          <TouchableOpacity style={styles.button}>
+            <Text style={styles.buttonText}>Sign In</Text>
+          </TouchableOpacity>
+        </Link>
         
         <Link href="/(tabs)" asChild>
           <TouchableOpacity style={[styles.button, styles.secondaryButton]}>
-            <Text style={[styles.buttonText, styles.secondaryButtonText]}>View App</Text>
+            <Text style={[styles.buttonText, styles.secondaryButtonText]}>View Demo</Text>
           </TouchableOpacity>
         </Link>
       </View>
       
-      <Text style={styles.note}>
-        Full authentication and magic link login coming soon!
+      <Text style={styles.description}>
+        Transform your family's daily Wordle into an exciting golf-style tournament!
       </Text>
     </View>
   )
@@ -54,14 +52,13 @@ const styles = StyleSheet.create({
   buttonContainer: {
     gap: 15,
     marginBottom: 30,
-    width: '100%',
-    maxWidth: 300,
   },
   button: {
     backgroundColor: '#059669',
     paddingHorizontal: 30,
     paddingVertical: 15,
     borderRadius: 8,
+    minWidth: 200,
   },
   secondaryButton: {
     backgroundColor: 'transparent',
@@ -77,10 +74,11 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: '#059669',
   },
-  note: {
+  description: {
     fontSize: 14,
     color: '#6b7280',
     textAlign: 'center',
-    fontStyle: 'italic',
+    lineHeight: 20,
+    maxWidth: 300,
   },
 });
