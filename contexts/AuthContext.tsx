@@ -47,14 +47,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     )
 
-    // Set up automatic session refresh every 30 minutes
+    // Set up automatic session refresh every 12 hours (for 48-hour sessions)
     const refreshInterval = setInterval(async () => {
       const status = await getSessionStatus()
-      if (status.isValid && status.timeUntilExpiry < 60 * 60 * 1000) { // If less than 1 hour left
+      if (status.isValid && status.timeUntilExpiry < 6 * 60 * 60 * 1000) { // If less than 6 hours left
         console.log('Refreshing session automatically...')
         await refreshSession()
       }
-    }, 30 * 60 * 1000) // Check every 30 minutes
+    }, 12 * 60 * 60 * 1000) // Check every 12 hours
 
     return () => {
       subscription.unsubscribe()

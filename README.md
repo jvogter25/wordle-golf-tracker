@@ -224,4 +224,35 @@ MIT License - Feel free to adapt for your own family's Wordle competitions!
 
 ---
 
-**Made with ❤️ for family fun and friendly competition** 
+**Made with ❤️ for family fun and friendly competition**
+
+## Session Configuration (48-hour sessions)
+
+To enable 48-hour sessions, configure your Supabase project:
+
+1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
+2. Navigate to **Authentication** → **Settings** 
+3. Update these settings:
+   - **JWT expiry limit**: 172800 (48 hours in seconds)
+   - **Refresh token rotation**: Enabled
+   - **Refresh token reuse interval**: 10 (seconds)
+   - **Session timeout**: 172800 (48 hours in seconds)
+
+## Environment Variables
+
+Create a `.env.local` file with:
+```
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+## Development
+
+```bash
+npm install
+npm run dev
+```
+
+## Deployment
+
+Push to GitHub and deploy via Vercel dashboard with environment variables configured. 
