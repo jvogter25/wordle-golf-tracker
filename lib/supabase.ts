@@ -1,17 +1,39 @@
-import 'react-native-url-polyfill/auto'
 import { createClient } from '@supabase/supabase-js'
-import AsyncStorage from '@react-native-async-storage/async-storage'
 
-// Temporarily hardcoded for testing
-const supabaseUrl = 'https://xneavnttdgrpltmmldit.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuZWF2bnR0ZGdycGx0bW1sZGl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2NTk3ODksImV4cCI6MjA2NTIzNTc4OX0.2T3VMVWWn7g-m8iYcoHq8r5ZkM8rWtLEZ2RXWttw3AA'
+// Environment variables for Next.js web deployment
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://xneavnttdgrpltmmldit.supabase.co'
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuZWF2bnR0ZGdycGx0bW1sZGl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2NTk3ODksImV4cCI6MjA2NTIzNTc4OX0.2T3VMVWWn7g-m8iYcoHq8r5ZkM8rWtLEZ2RXWttw3AA'
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables')
+}
+
+// Web-compatible localStorage adapter
+const webStorage = {
+  getItem: (key: string) => {
+    if (typeof window !== 'undefined') {
+      return window.localStorage.getItem(key)
+    }
+    return null
+  },
+  setItem: (key: string, value: string) => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(key, value)
+    }
+  },
+  removeItem: (key: string) => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(key)
+    }
+  },
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: AsyncStorage,
+    storage: webStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: true,
   },
 })
 
