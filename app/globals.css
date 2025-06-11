@@ -2,12 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* VERCEL TEST - This should appear if CSS is loading */
-body {
-  background-color: #f0f9ff !important;
-  border: 5px solid red !important;
-}
-
 :root {
   --primary-50: #eff6ff;
   --primary-100: #dbeafe;
