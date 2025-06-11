@@ -16,10 +16,18 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (user) {
-      fetchProfile()
+    console.log('🔄 Profile page: Auth state changed', { user: user?.email, authLoading })
+    
+    if (!authLoading) {
+      if (user) {
+        console.log('✅ User found, fetching profile')
+        fetchProfile()
+      } else {
+        console.log('ℹ️ No user, stopping loading')
+        setLoading(false)
+      }
     }
-  }, [user])
+  }, [user, authLoading])
 
   const fetchProfile = async () => {
     try {

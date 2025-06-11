@@ -35,22 +35,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const initializeAuth = async () => {
       try {
+        console.log('🔄 Initializing auth...')
+        
         // Get initial session
         const { data: { session: initialSession }, error } = await supabase.auth.getSession()
         
         if (error) {
-          console.error('Error getting initial session:', error)
+          console.error('❌ Error getting initial session:', error)
         } else if (initialSession && isMounted) {
-          console.log('Initial session found:', initialSession.user.email)
+          console.log('✅ Initial session found:', initialSession.user.email)
           setSession(initialSession)
           setUser(initialSession.user)
         } else {
-          console.log('No initial session found')
+          console.log('ℹ️ No initial session found')
         }
       } catch (error) {
-        console.error('Error in initializeAuth:', error)
+        console.error('❌ Error in initializeAuth:', error)
       } finally {
         if (isMounted) {
+          console.log('✅ Auth initialization complete, setting loading to false')
           setLoading(false)
         }
       }
@@ -61,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log('Auth state change:', event, newSession?.user?.email || 'no user')
+        console.log('🔄 Auth state change:', event, newSession?.user?.email || 'no user')
         
         if (!isMounted) return
 
@@ -69,12 +72,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (newSession) {
             setSession(newSession)
             setUser(newSession.user)
-            console.log('User signed in:', newSession.user.email)
+            console.log('✅ User signed in:', newSession.user.email)
           }
         } else if (event === 'SIGNED_OUT') {
           setSession(null)
           setUser(null)
-          console.log('User signed out')
+          console.log('✅ User signed out')
         }
         
         setLoading(false)
@@ -87,31 +90,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       const status = await getSessionStatus()
       if (status.isValid && status.timeUntilExpiry < 12 * 60 * 60 * 1000) { // 12 hours
-        console.log('Auto-refreshing session')
+        console.log('🔄 Auto-refreshing session')
         await refreshSession()
       }
     }, 30 * 60 * 1000) // 30 minutes
+
+    // Failsafe: ensure loading doesn't stay true forever
+    const loadingTimeout = setTimeout(() => {
+      if (isMounted && loading) {
+        console.log('⚠️ Loading timeout reached, forcing loading to false')
+        setLoading(false)
+      }
+    }, 10000) // 10 seconds max loading time
 
     return () => {
       isMounted = false
       subscription.unsubscribe()
       clearInterval(refreshInterval)
+      clearTimeout(loadingTimeout)
     }
-  }, [mounted])
+  }, [mounted, loading])
 
   const signOut = async () => {
     try {
       setLoading(true)
+      console.log('🔄 Signing out...')
       const { error } = await supabase.auth.signOut()
       if (error) {
-        console.error('Error signing out:', error)
+        console.error('❌ Error signing out:', error)
       } else {
         setSession(null)
         setUser(null)
-        console.log('Successfully signed out')
+        console.log('✅ Successfully signed out')
       }
     } catch (error) {
-      console.error('Unexpected error during sign out:', error)
+      console.error('❌ Unexpected error during sign out:', error)
     } finally {
       setLoading(false)
     }

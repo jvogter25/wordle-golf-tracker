@@ -48,8 +48,12 @@ export default function AuthCallbackPage() {
           if (data.session) {
             console.log('Magic link authentication successful:', data.session.user.email)
             setStatus('success')
-            setMessage('Successfully signed in!')
-            setTimeout(() => router.push('/groups'), 1000)
+            setMessage('Successfully signed in! Redirecting...')
+            
+            // Force a full page reload to ensure CSS and auth state are properly loaded
+            setTimeout(() => {
+              window.location.href = '/'
+            }, 1500)
             return
           }
         }
@@ -68,8 +72,12 @@ export default function AuthCallbackPage() {
         if (sessionData.session) {
           console.log('Existing session found:', sessionData.session.user.email)
           setStatus('success')
-          setMessage('Already signed in!')
-          setTimeout(() => router.push('/groups'), 1000)
+          setMessage('Already signed in! Redirecting...')
+          
+          // Force a full page reload to ensure CSS and auth state are properly loaded
+          setTimeout(() => {
+            window.location.href = '/'
+          }, 1000)
           return
         }
 
@@ -112,7 +120,7 @@ export default function AuthCallbackPage() {
           <div className="text-green-500 text-6xl mb-4">✅</div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Success!</h2>
           <p className="text-gray-600 mb-4">{message}</p>
-          <p className="text-sm text-gray-500">Redirecting to your groups...</p>
+          <p className="text-sm text-gray-500">Loading your dashboard...</p>
         </div>
       </div>
     )

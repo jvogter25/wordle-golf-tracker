@@ -18,13 +18,24 @@ export default function GroupsPage() {
   const [message, setMessage] = useState('')
 
   useEffect(() => {
-    if (user) {
-      fetchGroups()
+    console.log('🔄 Groups page: Auth state changed', { user: user?.email, authLoading })
+    
+    if (!authLoading) {
+      if (user) {
+        console.log('✅ User found, fetching groups')
+        fetchGroups()
+      } else {
+        console.log('ℹ️ No user, stopping loading')
+        setLoading(false)
+      }
     }
-  }, [user])
+  }, [user, authLoading])
 
   const fetchGroups = async () => {
     try {
+      console.log('🔄 Fetching groups for user:', user?.email)
+      setLoading(true)
+      
       const { data, error } = await supabase
         .from('group_members')
         .select(`
@@ -40,6 +51,8 @@ export default function GroupsPage() {
         .eq('user_id', user?.id)
 
       if (error) throw error
+
+      console.log('✅ Groups data received:', data?.length || 0, 'groups')
 
       // Get member counts for each group
       const groupsWithCounts = await Promise.all(
@@ -58,11 +71,13 @@ export default function GroupsPage() {
       )
 
       setGroups(groupsWithCounts)
+      console.log('✅ Groups with counts set:', groupsWithCounts.length)
     } catch (error) {
-      console.error('Error fetching groups:', error)
+      console.error('❌ Error fetching groups:', error)
       setMessage('Error loading groups')
     } finally {
       setLoading(false)
+      console.log('✅ Groups loading complete')
     }
   }
 
