@@ -104,7 +104,7 @@ export default function HomePage() {
         </div>
 
         {/* Navigation Links */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
           <Link 
             href="/groups" 
             className="bg-blue-500 text-white p-4 rounded-lg text-center font-semibold hover:bg-blue-600 transition-colors"
@@ -128,6 +128,12 @@ export default function HomePage() {
             className="bg-purple-500 text-white p-4 rounded-lg text-center font-semibold hover:bg-purple-600 transition-colors"
           >
             🎯 Tournaments
+          </Link>
+          <Link 
+            href="/profile" 
+            className="bg-gray-500 text-white p-4 rounded-lg text-center font-semibold hover:bg-gray-600 transition-colors"
+          >
+            👤 Profile
           </Link>
         </div>
       </div>

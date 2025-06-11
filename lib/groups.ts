@@ -11,7 +11,7 @@ export const createGroup = async (name: string, description?: string) => {
   
   const inviteCode = generateInviteCode()
   
-  // Create group
+  // Create group with direct approach (RLS is disabled)
   const { data: group, error: groupError } = await supabase
     .from('groups')
     .insert({
@@ -43,98 +43,49 @@ export const joinGroupByCode = async (inviteCode: string) => {
   const user = await supabase.auth.getUser()
   if (!user.data.user) throw new Error('Not authenticated')
   
-  // Find group by invite code
-  const { data: group, error: groupError } = await supabase
-    .from('groups')
-    .select('*')
-    .eq('invite_code', inviteCode.toUpperCase())
-    .single()
+  // Use database function to join group
+  const { data, error } = await supabase.rpc('join_group_by_code', {
+    invite_code_param: inviteCode
+  })
   
-  if (groupError) throw new Error('Invalid invite code')
+  if (error) throw new Error(error.message)
   
-  // Check if already a member
-  const { data: existingMember } = await supabase
-    .from('group_members')
-    .select('*')
-    .eq('group_id', group.id)
-    .eq('user_id', user.data.user.id)
-    .single()
-  
-  if (existingMember) throw new Error('Already a member of this group')
-  
-  // Add as member
-  const { error: memberError } = await supabase
-    .from('group_members')
-    .insert({
-      group_id: group.id,
-      user_id: user.data.user.id,
-      role: 'member'
-    })
-  
-  if (memberError) throw memberError
-  
-  return group
+  return data
 }
 
 export const getUserGroups = async () => {
   const user = await supabase.auth.getUser()
   if (!user.data.user) throw new Error('Not authenticated')
   
-  const { data, error } = await supabase
-    .from('group_members')
-    .select(`
-      *,
-      groups (
-        id,
-        name,
-        description,
-        invite_code,
-        created_at
-      )
-    `)
-    .eq('user_id', user.data.user.id)
+  // Use database function to get user groups
+  const { data, error } = await supabase.rpc('get_user_groups')
   
   if (error) throw error
   
-  return data.map(member => ({
-    ...member.groups,
-    role: member.role,
-    joined_at: member.joined_at
-  }))
+  return data || []
 }
 
 export const getGroupMembers = async (groupId: string) => {
-  const { data, error } = await supabase
-    .from('group_members')
-    .select(`
-      *,
-      profiles (
-        id,
-        email,
-        display_name,
-        avatar_url
-      )
-    `)
-    .eq('group_id', groupId)
+  // Use database function to get group members
+  const { data, error } = await supabase.rpc('get_group_members', {
+    group_id_param: groupId
+  })
   
   if (error) throw error
   
-  return data.map(member => ({
-    ...member.profiles,
-    role: member.role,
-    joined_at: member.joined_at
-  }))
+  return data || []
 }
 
 export const leaveGroup = async (groupId: string) => {
   const user = await supabase.auth.getUser()
   if (!user.data.user) throw new Error('Not authenticated')
   
-  const { error } = await supabase
-    .from('group_members')
-    .delete()
-    .eq('group_id', groupId)
-    .eq('user_id', user.data.user.id)
+  // Use database function to leave group
+  const { data, error } = await supabase.rpc('leave_group', {
+    group_id_param: groupId
+  })
   
   if (error) throw error
+  
+  return data
 } 

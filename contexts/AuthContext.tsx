@@ -22,8 +22,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
@@ -41,7 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     )
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [mounted])
 
   const signOut = async () => {
     try {
@@ -56,6 +63,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     loading,
     signOut,
+  }
+
+  // Don't render anything until mounted on client
+  if (!mounted) {
+    return <div className="min-h-screen bg-blue-50 flex items-center justify-center">
+      <div className="text-xl text-gray-600">Loading...</div>
+    </div>
   }
 
   return (

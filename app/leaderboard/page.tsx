@@ -26,6 +26,12 @@ export default function LeaderboardPage() {
     }
   }, [selectedGroup, viewType])
 
+  const getNextMonthStart = (currentMonth: string): string => {
+    const date = new Date(currentMonth + '-01')
+    date.setMonth(date.getMonth() + 1)
+    return date.toISOString().slice(0, 7) + '-01'
+  }
+
   const fetchUserGroups = async () => {
     try {
       const { data, error } = await supabase
@@ -59,11 +65,11 @@ export default function LeaderboardPage() {
         .from('scores')
         .select(`
           *,
-          profiles (display_name, email)
+          profiles (display_name, email, avatar_url)
         `)
         .eq('group_id', selectedGroup)
         .gte('puzzle_date', `${currentMonth}-01`)
-        .lt('puzzle_date', `${currentMonth}-32`)
+        .lt('puzzle_date', `${getNextMonthStart(currentMonth)}`)
         .order('puzzle_date', { ascending: true })
 
       if (scoresError) throw scoresError
@@ -82,12 +88,14 @@ export default function LeaderboardPage() {
       scores?.forEach(score => {
         const userId = score.user_id
         const playerName = score.profiles?.display_name || score.profiles?.email || 'Unknown'
+        const playerAvatar = score.profiles?.avatar_url
         
         if (!playerStats.has(userId)) {
           const handicap = handicaps?.find(h => h.user_id === userId)?.current_handicap || 0
           playerStats.set(userId, {
             userId,
             name: playerName,
+            avatar: playerAvatar,
             totalRaw: 0,
             totalNet: 0,
             gamesPlayed: 0,
@@ -272,12 +280,25 @@ export default function LeaderboardPage() {
                     }`}>
                       {index + 1}
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{player.name}</h3>
-                      <p className="text-sm text-gray-600">
-                        {player.gamesPlayed} game{player.gamesPlayed !== 1 ? 's' : ''} played
-                        {viewType === 'net' && ` • ${player.handicap.toFixed(1)} handicap`}
-                      </p>
+                    <div className="flex items-center space-x-3">
+                      {player.avatar ? (
+                        <img
+                          src={player.avatar}
+                          alt={player.name}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center text-white font-semibold">
+                          {player.name[0].toUpperCase()}
+                        </div>
+                      )}
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{player.name}</h3>
+                        <p className="text-sm text-gray-600">
+                          {player.gamesPlayed} game{player.gamesPlayed !== 1 ? 's' : ''} played
+                          {viewType === 'net' && ` • ${player.handicap.toFixed(1)} handicap`}
+                        </p>
+                      </div>
                     </div>
                   </div>
                   <div className="text-right">

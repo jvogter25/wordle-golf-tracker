@@ -71,28 +71,13 @@ export default function GroupsPage() {
     if (!newGroupName.trim()) return
 
     try {
-      const { data, error } = await supabase
-        .from('groups')
-        .insert({
-          name: newGroupName.trim(),
-          description: newGroupDescription.trim() || null,
-          created_by: user?.id
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-
-      // Add creator as admin member
-      const { error: memberError } = await supabase
-        .from('group_members')
-        .insert({
-          group_id: data.id,
-          user_id: user?.id,
-          role: 'admin'
-        })
-
-      if (memberError) throw memberError
+      // Import and use the library function
+      const { createGroup: createGroupLib } = await import('../../lib/groups')
+      
+      await createGroupLib(
+        newGroupName.trim(),
+        newGroupDescription.trim() || undefined
+      )
 
       setMessage('Group created successfully!')
       setShowCreateForm(false)
