@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 
-export default function AuthCallbackPage() {
+export default function MagicLinkCallbackPage() {
   const router = useRouter()
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [message, setMessage] = useState('')
@@ -12,20 +12,20 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        console.log('🔄 Auth callback started')
-        console.log('🔍 Current URL:', window.location.href)
+        console.log('🔄 Magic Link Callback: Auth callback started')
+        console.log('🔍 Magic Link Callback: Current URL:', window.location.href)
         
         // Get the current URL hash and search params
         const hashParams = new URLSearchParams(window.location.hash.substring(1))
         const searchParams = new URLSearchParams(window.location.search)
         
-        console.log('🔍 Hash params:', Object.fromEntries(hashParams))
-        console.log('🔍 Search params:', Object.fromEntries(searchParams))
+        console.log('🔍 Magic Link Callback: Hash params:', Object.fromEntries(hashParams))
+        console.log('🔍 Magic Link Callback: Search params:', Object.fromEntries(searchParams))
         
         // Check for error in URL
         const error = hashParams.get('error') || searchParams.get('error')
         if (error) {
-          console.error('❌ Auth error from URL:', error)
+          console.error('❌ Magic Link Callback: Auth error from URL:', error)
           setStatus('error')
           setMessage(`Authentication failed: ${error}`)
           setTimeout(() => router.push('/auth/login'), 3000)
@@ -37,7 +37,7 @@ export default function AuthCallbackPage() {
         const refreshToken = hashParams.get('refresh_token')
         
         if (accessToken && refreshToken) {
-          console.log('✅ Found tokens in URL, setting session...')
+          console.log('✅ Magic Link Callback: Found tokens in URL, setting session...')
           
           // Set the session using the tokens from the URL
           const { data, error: sessionError } = await supabase.auth.setSession({
@@ -46,7 +46,7 @@ export default function AuthCallbackPage() {
           })
           
           if (sessionError) {
-            console.error('❌ Session error:', sessionError)
+            console.error('❌ Magic Link Callback: Session error:', sessionError)
             setStatus('error')
             setMessage('Failed to establish session')
             setTimeout(() => router.push('/auth/login'), 3000)
@@ -54,27 +54,27 @@ export default function AuthCallbackPage() {
           }
 
           if (data.session) {
-            console.log('✅ Magic link authentication successful:', data.session.user.email)
-            console.log('✅ Session established:', data.session.access_token.substring(0, 20) + '...')
+            console.log('✅ Magic Link Callback: Magic link authentication successful:', data.session.user.email)
+            console.log('✅ Magic Link Callback: Session established:', data.session.access_token.substring(0, 20) + '...')
             
             setStatus('success')
             setMessage('Successfully signed in! Redirecting...')
             
             // Wait a bit longer to ensure session is fully established
-            console.log('⏳ Waiting for session to be fully established...')
+            console.log('⏳ Magic Link Callback: Waiting for session to be fully established...')
             await new Promise(resolve => setTimeout(resolve, 2000))
             
             // Verify session is still valid before redirecting
             const { data: verifyData, error: verifyError } = await supabase.auth.getSession()
             if (verifyError || !verifyData.session) {
-              console.error('❌ Session verification failed:', verifyError)
+              console.error('❌ Magic Link Callback: Session verification failed:', verifyError)
               setStatus('error')
               setMessage('Session verification failed')
               setTimeout(() => router.push('/auth/login'), 3000)
               return
             }
             
-            console.log('✅ Session verified, redirecting to home page...')
+            console.log('✅ Magic Link Callback: Session verified, redirecting to home page...')
             
             // Force a full page reload to ensure CSS and auth state are properly loaded
             window.location.href = '/'
@@ -83,11 +83,11 @@ export default function AuthCallbackPage() {
         }
 
         // Fallback: try to get existing session
-        console.log('🔍 No tokens in URL, checking for existing session...')
+        console.log('🔍 Magic Link Callback: No tokens in URL, checking for existing session...')
         const { data: sessionData, error: getSessionError } = await supabase.auth.getSession()
         
         if (getSessionError) {
-          console.error('❌ Get session error:', getSessionError)
+          console.error('❌ Magic Link Callback: Get session error:', getSessionError)
           setStatus('error')
           setMessage('Failed to verify session')
           setTimeout(() => router.push('/auth/login'), 3000)
@@ -95,7 +95,7 @@ export default function AuthCallbackPage() {
         }
 
         if (sessionData.session) {
-          console.log('✅ Existing session found:', sessionData.session.user.email)
+          console.log('✅ Magic Link Callback: Existing session found:', sessionData.session.user.email)
           setStatus('success')
           setMessage('Already signed in! Redirecting...')
           
@@ -107,13 +107,13 @@ export default function AuthCallbackPage() {
         }
 
         // No valid session found
-        console.log('ℹ️ No valid session, redirecting to login')
+        console.log('ℹ️ Magic Link Callback: No valid session, redirecting to login')
         setStatus('error')
         setMessage('No valid authentication found')
         setTimeout(() => router.push('/auth/login'), 2000)
         
       } catch (error) {
-        console.error('❌ Unexpected error in auth callback:', error)
+        console.error('❌ Magic Link Callback: Unexpected error in auth callback:', error)
         setStatus('error')
         setMessage('An unexpected error occurred')
         setTimeout(() => router.push('/auth/login'), 3000)

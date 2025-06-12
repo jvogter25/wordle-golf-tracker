@@ -13,9 +13,9 @@ export default function LoginPage() {
   const getRedirectUrl = () => {
     // Always use the current origin, whether localhost or production
     if (typeof window !== 'undefined') {
-      return `${window.location.origin}/auth/callback`
+      return `${window.location.origin}/auth/magic-link`
     }
-    return '/auth/callback'
+    return '/auth/magic-link'
   }
 
   const handleLogin = async (e: React.FormEvent) => {
