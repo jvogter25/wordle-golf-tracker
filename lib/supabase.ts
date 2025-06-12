@@ -8,39 +8,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
-// Web-compatible localStorage adapter
-const webStorage = {
-  getItem: (key: string) => {
-    if (typeof window !== 'undefined') {
-      return window.localStorage.getItem(key)
-    }
-    return null
-  },
-  setItem: (key: string, value: string) => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(key, value)
-    }
-  },
-  removeItem: (key: string) => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.removeItem(key)
-    }
-  },
-}
-
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: webStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true,
-    storageKey: 'wordle-golf-session',
-    flowType: 'pkce'
-  },
-  global: {
-    headers: {
-      'X-Client-Info': 'wordle-golf-tracker'
-    }
+    detectSessionInUrl: true
   }
 })
 
