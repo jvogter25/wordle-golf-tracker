@@ -14,6 +14,11 @@ export default function MagicLinkCallbackPage() {
       try {
         console.log('🔄 Magic Link Callback: Auth callback started')
         console.log('🔍 Magic Link Callback: Current URL:', window.location.href)
+        console.log('🔍 Magic Link Callback: User Agent:', navigator.userAgent)
+        
+        // Detect mobile devices
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+        console.log('📱 Magic Link Callback: Is mobile device:', isMobile)
         
         // Get URL parameters
         const searchParams = new URLSearchParams(window.location.search)
@@ -37,14 +42,17 @@ export default function MagicLinkCallbackPage() {
         
         let session = null
         let attempts = 0
-        const maxAttempts = 15 // Increased from 10 to 15
+        // Increase max attempts for mobile devices
+        const maxAttempts = isMobile ? 25 : 15
         
         // Poll for session with exponential backoff
         while (!session && attempts < maxAttempts) {
           attempts++
-          const delay = Math.min(1000 * Math.pow(1.5, attempts - 1), 3000) // Max 3 second delay
+          // Longer delays for mobile devices
+          const baseDelay = isMobile ? 2000 : 1000
+          const delay = Math.min(baseDelay * Math.pow(1.5, attempts - 1), isMobile ? 5000 : 3000)
           
-          console.log(`🔄 Magic Link Callback: Attempt ${attempts}/${maxAttempts}, waiting ${delay}ms...`)
+          console.log(`🔄 Magic Link Callback: Attempt ${attempts}/${maxAttempts}, waiting ${delay}ms... (Mobile: ${isMobile})`)
           await new Promise(resolve => setTimeout(resolve, delay))
           
           const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
@@ -69,7 +77,7 @@ export default function MagicLinkCallbackPage() {
         if (!session) {
           console.error('❌ Magic Link Callback: Failed to establish session after all attempts')
           setStatus('error')
-          setMessage('Failed to establish authentication session. Please try again.')
+          setMessage(`Failed to establish authentication session after ${maxAttempts} attempts. ${isMobile ? 'Mobile devices may take longer to authenticate.' : ''} Please try again.`)
           return
         }
 
@@ -106,9 +114,10 @@ export default function MagicLinkCallbackPage() {
         setStatus('success')
         setMessage('Successfully authenticated! Redirecting...')
 
-        // Wait a bit longer before redirect to ensure AuthContext has time to update
-        console.log('🔄 Magic Link Callback: Waiting 4 seconds before redirect to ensure AuthContext updates...')
-        await new Promise(resolve => setTimeout(resolve, 4000))
+        // Wait longer for mobile devices before redirect to ensure AuthContext has time to update
+        const redirectDelay = isMobile ? 6000 : 4000
+        console.log(`🔄 Magic Link Callback: Waiting ${redirectDelay}ms before redirect to ensure AuthContext updates... (Mobile: ${isMobile})`)
+        await new Promise(resolve => setTimeout(resolve, redirectDelay))
 
         console.log('🔄 Magic Link Callback: Redirecting to home page...')
         
@@ -134,6 +143,7 @@ export default function MagicLinkCallbackPage() {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
               <h2 className="text-xl font-semibold text-gray-900 mb-2">Signing you in...</h2>
               <p className="text-gray-600">Please wait while we authenticate your account.</p>
+              <p className="text-sm text-gray-500 mt-2">This may take longer on mobile devices.</p>
             </>
           )}
           
