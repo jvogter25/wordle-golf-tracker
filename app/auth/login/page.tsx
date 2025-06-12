@@ -7,8 +7,10 @@ import { supabase } from '../../../lib/supabase'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [isFirstTimeUser, setIsFirstTimeUser] = useState(false)
 
   const getRedirectUrl = () => {
     // Always use the current origin, whether localhost or production
@@ -30,8 +32,32 @@ export default function LoginPage() {
     setMessage('')
 
     try {
+      // First, try to sign in with password
+      if (password) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password: password.trim(),
+        })
+
+        if (!signInError) {
+          // Successful password login
+          return
+        }
+
+        // If error is not about invalid credentials, show it
+        if (signInError.message !== 'Invalid login credentials') {
+          setMessage(`Error: ${signInError.message}`)
+          return
+        }
+
+        // If we get here, it means invalid credentials
+        // Let's check if the user exists but hasn't set up password
+        setIsFirstTimeUser(true)
+      }
+
+      // If no password provided or invalid credentials, send magic link
       const redirectUrl = getRedirectUrl()
-      console.log('Redirect URL:', redirectUrl) // For debugging
+      console.log('Redirect URL:', redirectUrl)
       
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
@@ -82,6 +108,21 @@ export default function LoginPage() {
             />
           </div>
 
+          <div className="form-group">
+            <label htmlFor="password" className="form-label">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              className="input"
+              disabled={loading}
+            />
+          </div>
+
           {message && (
             <div className={`alert ${
               message.includes('Error') 
@@ -97,7 +138,7 @@ export default function LoginPage() {
             disabled={loading}
             className="btn btn-primary w-full"
           >
-            {loading ? 'Sending...' : 'Send Magic Link'}
+            {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
@@ -116,10 +157,10 @@ export default function LoginPage() {
         <div className="mt-6 p-4 bg-gray-100 rounded-lg">
           <h3 className="font-bold mb-2 text-gray-900">How it works:</h3>
           <ul className="text-gray-600 space-y-1">
-            <li>• Enter your email address</li>
-            <li>• We'll send you a secure login link</li>
-            <li>• Click the link to sign in instantly</li>
-            <li>• No passwords to remember!</li>
+            <li>• First-time users: Enter your email to receive a magic link</li>
+            <li>• You'll set up your password after first login</li>
+            <li>• Returning users: Sign in with email and password</li>
+            <li>• Forgot password? Just leave it blank to get a magic link</li>
           </ul>
         </div>
       </div>

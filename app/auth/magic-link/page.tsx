@@ -87,11 +87,32 @@ export default function MagicLinkCallbackPage() {
         setStatus('success')
         setMessage('Successfully authenticated! Redirecting...')
 
+        // Check if user has a password set
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
+        
+        if (userError) {
+          console.error('❌ Magic Link Callback: Error getting user:', userError)
+          setStatus('error')
+          setMessage('Failed to get user information. Please try again.')
+          return
+        }
+
         // Wait a moment then redirect
         await new Promise(resolve => setTimeout(resolve, 2000))
         
-        console.log('🔄 Magic Link Callback: Redirecting to home page...')
-        router.push('/')
+        // If user doesn't have a password set, redirect to password setup
+        // We can check this by looking at the user's identities
+        const hasPassword = user?.identities?.some(identity => 
+          identity.provider === 'email' && identity.identity_data?.email_verified
+        )
+
+        if (!hasPassword) {
+          console.log('🔄 Magic Link Callback: First-time user, redirecting to password setup...')
+          router.push('/auth/setup-password')
+        } else {
+          console.log('🔄 Magic Link Callback: Returning user, redirecting to home page...')
+          router.push('/')
+        }
 
       } catch (error) {
         console.error('❌ Magic Link Callback: Unexpected error:', error)

@@ -22,10 +22,11 @@ export default function SignupPage() {
     setMessage('')
 
     try {
+      // Send magic link for email verification
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/auth/magic-link`,
           data: {
             display_name: displayName.trim(),
           },
@@ -35,7 +36,7 @@ export default function SignupPage() {
       if (error) {
         setMessage(`Error: ${error.message}`)
       } else {
-        setMessage('Check your email for the verification link!')
+        setMessage('Check your email for the verification link! After verifying, you\'ll be able to set up your password.')
       }
     } catch (error) {
       setMessage('An unexpected error occurred')
@@ -119,12 +120,12 @@ export default function SignupPage() {
         </div>
 
         <div className="mt-6 p-4 bg-green-50 rounded-lg">
-          <h3 className="text-sm font-medium text-green-900 mb-2">What you get:</h3>
+          <h3 className="text-sm font-medium text-green-900 mb-2">How it works:</h3>
           <ul className="text-xs text-green-700 space-y-1">
-            <li>• Join or create family competitions</li>
-            <li>• Track your Wordle golf scores</li>
-            <li>• Participate in tournaments</li>
-            <li>• Compete with USGA-style handicaps</li>
+            <li>• Enter your email and display name</li>
+            <li>• Click the verification link in your email</li>
+            <li>• Set up your password for future logins</li>
+            <li>• Start tracking your Wordle scores!</li>
           </ul>
         </div>
       </div>
