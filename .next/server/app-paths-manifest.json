@@ -1,14 +1,14 @@
 {
   "/_not-found": "app/_not-found.js",
-  "/auth/magic-link/page": "app/auth/magic-link/page.js",
   "/auth/login/page": "app/auth/login/page.js",
+  "/auth/magic-link/page": "app/auth/magic-link/page.js",
   "/auth/signup/page": "app/auth/signup/page.js",
   "/groups/[id]/page": "app/groups/[id]/page.js",
   "/groups/page": "app/groups/page.js",
   "/leaderboard/page": "app/leaderboard/page.js",
+  "/submit/page": "app/submit/page.js",
   "/profile/page": "app/profile/page.js",
   "/tournaments/page": "app/tournaments/page.js",
-  "/submit/page": "app/submit/page.js",
   "/page": "app/page.js",
   "/icon/route": "app/icon/route.js"
 }

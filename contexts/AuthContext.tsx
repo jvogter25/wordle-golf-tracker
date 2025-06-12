@@ -26,13 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setMounted(true)
-  }, [])
-
-  useEffect(() => {
-    if (!mounted) return
-
-    let isMounted = true
-
+    
     const initializeAuth = async () => {
       try {
         console.log('🔄 AuthContext: Initializing auth...')
@@ -42,137 +36,131 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (error) {
           console.error('❌ AuthContext: Error getting initial session:', error)
-        } else if (initialSession && isMounted) {
+        } else if (initialSession) {
           console.log('✅ AuthContext: Initial session found:', initialSession.user.email)
-          console.log('✅ AuthContext: Session expires at:', new Date(initialSession.expires_at! * 1000).toLocaleString())
           setSession(initialSession)
           setUser(initialSession.user)
         } else {
           console.log('ℹ️ AuthContext: No initial session found')
         }
-      } catch (error) {
-        console.error('❌ AuthContext: Error in initializeAuth:', error)
-      } finally {
-        if (isMounted) {
-          console.log('✅ AuthContext: Auth initialization complete, setting loading to false')
+        
+        // Set up auth state change listener
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            console.log('🔄 AuthContext: Auth state change:', event, session?.user?.email || 'no user')
+            
+            if (session) {
+              console.log('✅ AuthContext: Session updated:', {
+                user: session.user.email,
+                expiresAt: new Date(session.expires_at! * 1000).toLocaleString()
+              })
+              setSession(session)
+              setUser(session.user)
+            } else {
+              console.log('ℹ️ AuthContext: Session cleared')
+              setSession(null)
+              setUser(null)
+            }
+            
+            // Always set loading to false after any auth state change
+            setLoading(false)
+          }
+        )
+
+        // Set loading to false after initial check, but with a longer timeout for magic link scenarios
+        const timeoutId = setTimeout(() => {
+          console.log('⏰ AuthContext: Loading timeout reached, forcing loading to false')
+          setLoading(false)
+        }, 8000) // Increased from 5000 to 8000ms to account for magic link delays
+
+        // If we have a session immediately, clear the timeout
+        if (initialSession) {
+          clearTimeout(timeoutId)
           setLoading(false)
         }
+
+        return () => {
+          clearTimeout(timeoutId)
+          subscription.unsubscribe()
+        }
+        
+      } catch (error) {
+        console.error('❌ AuthContext: Error in auth initialization:', error)
+        setLoading(false)
       }
     }
 
     initializeAuth()
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        console.log('🔄 AuthContext: Auth state change:', event, newSession?.user?.email || 'no user')
-        
-        if (!isMounted) return
-
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          if (newSession) {
-            console.log('✅ AuthContext: User signed in:', newSession.user.email)
-            console.log('✅ AuthContext: New session expires at:', new Date(newSession.expires_at! * 1000).toLocaleString())
-            setSession(newSession)
-            setUser(newSession.user)
-          }
-        } else if (event === 'SIGNED_OUT') {
-          console.log('✅ AuthContext: User signed out')
-          setSession(null)
-          setUser(null)
-        }
-        
-        // Always set loading to false after any auth state change
-        setLoading(false)
-      }
-    )
-
-    // Auto-refresh session every 30 minutes
+    // Set up periodic session refresh (every 30 minutes)
     const refreshInterval = setInterval(async () => {
-      if (!isMounted) return
-      
-      const status = await getSessionStatus()
-      if (status.isValid && status.timeUntilExpiry < 12 * 60 * 60 * 1000) { // 12 hours
-        console.log('🔄 AuthContext: Auto-refreshing session')
-        await refreshSession()
+      const { data: { session: currentSession } } = await supabase.auth.getSession()
+      if (currentSession) {
+        const expiresAt = new Date(currentSession.expires_at! * 1000)
+        const now = new Date()
+        const timeUntilExpiry = expiresAt.getTime() - now.getTime()
+        
+        console.log('🔄 AuthContext: Session check - expires at:', expiresAt.toLocaleString())
+        
+        // Refresh if expires within 10 minutes
+        if (timeUntilExpiry < 10 * 60 * 1000) {
+          console.log('🔄 AuthContext: Session expiring soon, refreshing...')
+          try {
+            await refreshSession()
+          } catch (error) {
+            console.error('❌ AuthContext: Session refresh failed:', error)
+          }
+        }
       }
     }, 30 * 60 * 1000) // 30 minutes
 
-    // Failsafe: ensure loading doesn't stay true forever
-    const loadingTimeout = setTimeout(() => {
-      if (isMounted && loading) {
-        console.log('⚠️ AuthContext: Loading timeout reached, forcing loading to false')
-        setLoading(false)
-      }
-    }, 10000) // 10 seconds max loading time
-
-    // Additional check: periodically verify session is still valid
-    const sessionCheckInterval = setInterval(async () => {
-      if (!isMounted || !session) return
-      
-      try {
-        const { data: { session: currentSession }, error } = await supabase.auth.getSession()
-        if (error || !currentSession) {
-          console.log('⚠️ AuthContext: Session no longer valid, clearing state')
-          setSession(null)
-          setUser(null)
-        } else if (currentSession.user.id !== session.user.id) {
-          console.log('🔄 AuthContext: Session user changed, updating state')
-          setSession(currentSession)
-          setUser(currentSession.user)
-        }
-      } catch (error) {
-        console.error('❌ AuthContext: Error checking session validity:', error)
-      }
-    }, 60000) // Check every minute
-
     return () => {
-      isMounted = false
-      subscription.unsubscribe()
       clearInterval(refreshInterval)
-      clearInterval(sessionCheckInterval)
-      clearTimeout(loadingTimeout)
     }
-  }, [mounted, loading, session])
+  }, [])
 
   const signOut = async () => {
     try {
-      setLoading(true)
       console.log('🔄 AuthContext: Signing out...')
       const { error } = await supabase.auth.signOut()
       if (error) {
-        console.error('❌ AuthContext: Error signing out:', error)
-      } else {
-        setSession(null)
-        setUser(null)
-        console.log('✅ AuthContext: Successfully signed out')
+        console.error('❌ AuthContext: Sign out error:', error)
+        throw error
       }
-    } catch (error) {
-      console.error('❌ AuthContext: Unexpected error during sign out:', error)
-    } finally {
+      console.log('✅ AuthContext: Successfully signed out')
+      
+      // Clear state immediately
+      setUser(null)
+      setSession(null)
       setLoading(false)
+    } catch (error) {
+      console.error('❌ AuthContext: Sign out failed:', error)
+      throw error
     }
   }
 
-  // Don't render children until mounted to prevent hydration issues
+  // Don't render children until mounted to avoid hydration issues
   if (!mounted) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="spinner"></div>
-      </div>
-    )
+    return null
   }
 
-  // Debug info
-  console.log('🔍 AuthContext render:', { 
-    user: user?.email || 'none', 
-    loading, 
-    sessionValid: !!session,
-    mounted 
+  const contextValue = {
+    user,
+    session,
+    loading,
+    signOut,
+  }
+
+  // Debug logging
+  console.log('🔄 AuthContext render:', {
+    user: user?.email || 'none',
+    loading,
+    sessionValid: session ? new Date(session.expires_at! * 1000) > new Date() : false,
+    mounted
   })
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signOut }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   )

@@ -23,117 +23,150 @@ export default function MagicLinkCallbackPage() {
         console.log('🔍 Magic Link Callback: Hash params:', Object.fromEntries(hashParams))
         
         // Check for error in URL
-        const error = searchParams.get('error') || hashParams.get('error')
-        const errorDescription = searchParams.get('error_description') || hashParams.get('error_description')
-        
+        const error = hashParams.get('error') || searchParams.get('error')
         if (error) {
-          console.error('❌ Magic Link Callback: Auth error from URL:', error, errorDescription)
+          console.error('❌ Magic Link Callback: Error in URL:', error)
           setStatus('error')
-          setMessage(`Authentication failed: ${error}${errorDescription ? ` - ${errorDescription}` : ''}`)
-          setTimeout(() => router.push('/auth/login'), 3000)
+          setMessage(`Authentication error: ${error}`)
           return
         }
 
         // For PKCE flow, Supabase handles the token exchange automatically
-        // We just need to wait a moment and then check for the session
-        console.log('⏳ Magic Link Callback: Waiting for Supabase to process PKCE token...')
+        // We just need to wait for the session to be established
+        console.log('🔄 Magic Link Callback: Waiting for PKCE session establishment...')
         
-        // Wait a bit for Supabase to process the authentication
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        // Check for session multiple times with retries
         let session = null
         let attempts = 0
-        const maxAttempts = 5
+        const maxAttempts = 15 // Increased from 10 to 15
         
+        // Poll for session with exponential backoff
         while (!session && attempts < maxAttempts) {
           attempts++
-          console.log(`🔍 Magic Link Callback: Checking for session (attempt ${attempts}/${maxAttempts})...`)
+          const delay = Math.min(1000 * Math.pow(1.5, attempts - 1), 3000) // Max 3 second delay
           
-          const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+          console.log(`🔄 Magic Link Callback: Attempt ${attempts}/${maxAttempts}, waiting ${delay}ms...`)
+          await new Promise(resolve => setTimeout(resolve, delay))
+          
+          const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
           
           if (sessionError) {
             console.error('❌ Magic Link Callback: Session error:', sessionError)
-          } else if (sessionData.session) {
-            session = sessionData.session
-            console.log('✅ Magic Link Callback: Session found:', session.user.email)
-            break
-          } else {
-            console.log('⏳ Magic Link Callback: No session yet, waiting...')
-            // Wait before next attempt
-            await new Promise(resolve => setTimeout(resolve, 1000))
+            continue
           }
+          
+          if (currentSession) {
+            session = currentSession
+            console.log('✅ Magic Link Callback: Session found!', {
+              user: session.user?.email,
+              expiresAt: new Date(session.expires_at! * 1000).toLocaleString()
+            })
+            break
+          }
+          
+          console.log(`⏳ Magic Link Callback: No session yet, attempt ${attempts}/${maxAttempts}`)
         }
 
-        if (session) {
-          console.log('✅ Magic Link Callback: Authentication successful!')
-          console.log('✅ Magic Link Callback: User:', session.user.email)
-          console.log('✅ Magic Link Callback: Session expires at:', new Date(session.expires_at! * 1000).toLocaleString())
-          
-          setStatus('success')
-          setMessage('Successfully signed in! Redirecting...')
-          
-          // Wait a moment to show success message
-          await new Promise(resolve => setTimeout(resolve, 1500))
-          
-          console.log('🏠 Magic Link Callback: Redirecting to home page...')
-          
-          // Force a full page reload to ensure CSS and auth state are properly loaded
-          window.location.href = '/'
+        if (!session) {
+          console.error('❌ Magic Link Callback: Failed to establish session after all attempts')
+          setStatus('error')
+          setMessage('Failed to establish authentication session. Please try again.')
           return
         }
 
-        // If we get here, authentication failed
-        console.log('❌ Magic Link Callback: No session found after all attempts')
-        setStatus('error')
-        setMessage('Authentication failed - no session established')
-        setTimeout(() => router.push('/auth/login'), 3000)
+        // Verify session is valid and user exists
+        if (!session.user) {
+          console.error('❌ Magic Link Callback: Session exists but no user')
+          setStatus('error')
+          setMessage('Authentication session is invalid. Please try again.')
+          return
+        }
+
+        console.log('✅ Magic Link Callback: Successfully authenticated!', {
+          userId: session.user.id,
+          email: session.user.email,
+          expiresAt: new Date(session.expires_at! * 1000).toLocaleString()
+        })
+
+        // Force a session refresh to ensure it's properly stored
+        console.log('🔄 Magic Link Callback: Refreshing session to ensure persistence...')
+        const { data: refreshedSession, error: refreshError } = await supabase.auth.refreshSession()
         
+        if (refreshError) {
+          console.warn('⚠️ Magic Link Callback: Session refresh failed:', refreshError)
+        } else if (refreshedSession.session) {
+          console.log('✅ Magic Link Callback: Session refreshed successfully')
+        }
+
+        // Trigger auth state change event manually to ensure AuthContext picks it up
+        console.log('🔄 Magic Link Callback: Triggering auth state change...')
+        supabase.auth.onAuthStateChange((event, session) => {
+          console.log('🔄 Magic Link Callback: Auth state change triggered:', event, session?.user?.email)
+        })
+
+        setStatus('success')
+        setMessage('Successfully authenticated! Redirecting...')
+
+        // Wait a bit longer before redirect to ensure AuthContext has time to update
+        console.log('🔄 Magic Link Callback: Waiting 4 seconds before redirect to ensure AuthContext updates...')
+        await new Promise(resolve => setTimeout(resolve, 4000))
+
+        console.log('🔄 Magic Link Callback: Redirecting to home page...')
+        
+        // Use window.location.href for a full page reload to ensure fresh state
+        window.location.href = '/'
+
       } catch (error) {
-        console.error('❌ Magic Link Callback: Unexpected error in auth callback:', error)
+        console.error('❌ Magic Link Callback: Unexpected error:', error)
         setStatus('error')
-        setMessage('An unexpected error occurred')
-        setTimeout(() => router.push('/auth/login'), 3000)
+        setMessage(`Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
       }
     }
 
-    // Small delay to ensure URL is fully loaded
-    const timer = setTimeout(handleAuthCallback, 100)
-    return () => clearTimeout(timer)
+    handleAuthCallback()
   }, [router])
-
-  if (status === 'error') {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md p-6">
-          <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Authentication Error</h2>
-          <p className="text-gray-600 mb-4">{message}</p>
-          <p className="text-sm text-gray-500">Redirecting to login page...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (status === 'success') {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md p-6">
-          <div className="text-green-500 text-6xl mb-4">✅</div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Success!</h2>
-          <p className="text-gray-600 mb-4">{message}</p>
-          <p className="text-sm text-gray-500">Loading your dashboard...</p>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center p-6">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Signing you in...</h2>
-        <p className="text-gray-600">Please wait while we verify your account.</p>
+      <div className="max-w-md w-full bg-white rounded-lg shadow-md p-6">
+        <div className="text-center">
+          {status === 'loading' && (
+            <>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Signing you in...</h2>
+              <p className="text-gray-600">Please wait while we authenticate your account.</p>
+            </>
+          )}
+          
+          {status === 'success' && (
+            <>
+              <div className="rounded-full h-12 w-12 bg-green-100 mx-auto mb-4 flex items-center justify-center">
+                <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Authentication Successful!</h2>
+              <p className="text-gray-600">{message}</p>
+            </>
+          )}
+          
+          {status === 'error' && (
+            <>
+              <div className="rounded-full h-12 w-12 bg-red-100 mx-auto mb-4 flex items-center justify-center">
+                <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Authentication Failed</h2>
+              <p className="text-gray-600 mb-4">{message}</p>
+              <button
+                onClick={() => window.location.href = '/auth/login'}
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+              >
+                Try Again
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )
