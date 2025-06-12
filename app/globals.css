@@ -323,4 +323,9 @@ p, span, div, label, h1, h2, h3, h4, h5, h6 {
     flex-direction: column;
     gap: 0.5rem;
   }
+}
+
+/* Global link styling - Remove underlines by default */
+a {
+  text-decoration: none !important;
 } 
