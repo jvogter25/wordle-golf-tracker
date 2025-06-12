@@ -86,7 +86,7 @@ export default function HomePage() {
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-8 text-center">
             <p className="text-green-800">
               Welcome back, <strong>{user.email}</strong>! 
-              <Link href="/profile" className="ml-2 text-green-600 hover:text-green-800 underline">
+              <Link href="/profile" className="ml-2 text-green-600">
                 View Profile
               </Link>
             </p>
@@ -206,7 +206,7 @@ export default function HomePage() {
           <div className="text-center mt-8">
             <button
               onClick={signOut}
-              className="text-gray-500 hover:text-gray-700 underline"
+              className="text-gray-500 hover:text-gray-700"
             >
               Sign Out
             </button>
