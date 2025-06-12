@@ -265,14 +265,14 @@ export default function LeaderboardPage() {
               {leaderboard.map((player, index) => (
                 <div
                   key={player.userId}
-                  className={`flex items-center justify-between p-4 rounded-lg border ${
+                  className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 rounded-lg border ${
                     player.userId === user?.id
                       ? 'border-primary-300 bg-primary-50'
                       : 'border-gray-200 bg-gray-50'
                   }`}
                 >
-                  <div className="flex items-center space-x-4">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                  <div className="flex items-center space-x-3 sm:space-x-4 mb-2 sm:mb-0">
+                    <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm ${
                       index === 0 ? 'bg-yellow-400 text-yellow-900' :
                       index === 1 ? 'bg-gray-300 text-gray-700' :
                       index === 2 ? 'bg-orange-400 text-orange-900' :
@@ -280,32 +280,32 @@ export default function LeaderboardPage() {
                     }`}>
                       {index + 1}
                     </div>
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
                       {player.avatar ? (
                         <img
                           src={player.avatar}
                           alt={player.name}
-                          className="w-10 h-10 rounded-full object-cover"
+                          className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center text-white font-semibold">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary-500 flex items-center justify-center text-white font-semibold text-sm">
                           {player.name[0].toUpperCase()}
                         </div>
                       )}
                       <div>
-                        <h3 className="font-semibold text-gray-900">{player.name}</h3>
-                        <p className="text-sm text-gray-600">
+                        <h3 className="font-semibold text-gray-900 text-sm sm:text-base">{player.name}</h3>
+                        <p className="text-xs sm:text-sm text-gray-600">
                           {player.gamesPlayed} game{player.gamesPlayed !== 1 ? 's' : ''} played
                           {viewType === 'net' && ` • ${player.handicap.toFixed(1)} handicap`}
                         </p>
                       </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-xl font-bold text-gray-900">
+                  <div className="text-left sm:text-right ml-10 sm:ml-0">
+                    <div className="text-lg sm:text-xl font-bold text-gray-900">
                       {formatScore(viewType === 'net' ? player.avgNet : player.avgRaw)}
                     </div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-xs sm:text-sm text-gray-600">
                       {viewType === 'net' ? 'Net Average' : 'Raw Average'}
                     </div>
                   </div>
