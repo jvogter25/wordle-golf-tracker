@@ -16,6 +16,14 @@
       "static/css/0c7dca64b9f2e370.css",
       "static/chunks/app/layout-1dcc21e0f0ab0a76.js"
     ],
+    "/auth/magic-link/page": [
+      "static/chunks/webpack-88c661146243e9bc.js",
+      "static/chunks/fd9d1056-ea4f4f4434d0f4ad.js",
+      "static/chunks/472-e1f527bcae852e01.js",
+      "static/chunks/main-app-9b4cc9751f3e054a.js",
+      "static/chunks/553-b8eb1db4f8bc5f13.js",
+      "static/chunks/app/auth/magic-link/page-699e535465f0f2ff.js"
+    ],
     "/auth/login/page": [
       "static/chunks/webpack-88c661146243e9bc.js",
       "static/chunks/fd9d1056-ea4f4f4434d0f4ad.js",
@@ -34,13 +42,14 @@
       "static/chunks/396-3008b2bbfe1de4ec.js",
       "static/chunks/app/auth/signup/page-33bdce5607668b0b.js"
     ],
-    "/auth/magic-link/page": [
+    "/groups/[id]/page": [
       "static/chunks/webpack-88c661146243e9bc.js",
       "static/chunks/fd9d1056-ea4f4f4434d0f4ad.js",
       "static/chunks/472-e1f527bcae852e01.js",
       "static/chunks/main-app-9b4cc9751f3e054a.js",
       "static/chunks/553-b8eb1db4f8bc5f13.js",
-      "static/chunks/app/auth/magic-link/page-e7b0b8b2b366a847.js"
+      "static/chunks/396-3008b2bbfe1de4ec.js",
+      "static/chunks/app/groups/[id]/page-c709cb1960f34ac4.js"
     ],
     "/groups/page": [
       "static/chunks/webpack-88c661146243e9bc.js",
@@ -69,14 +78,14 @@
       "static/chunks/396-3008b2bbfe1de4ec.js",
       "static/chunks/app/profile/page-3a781885a849be58.js"
     ],
-    "/groups/[id]/page": [
+    "/tournaments/page": [
       "static/chunks/webpack-88c661146243e9bc.js",
       "static/chunks/fd9d1056-ea4f4f4434d0f4ad.js",
       "static/chunks/472-e1f527bcae852e01.js",
       "static/chunks/main-app-9b4cc9751f3e054a.js",
       "static/chunks/553-b8eb1db4f8bc5f13.js",
       "static/chunks/396-3008b2bbfe1de4ec.js",
-      "static/chunks/app/groups/[id]/page-c709cb1960f34ac4.js"
+      "static/chunks/app/tournaments/page-dc7b51e2163a217c.js"
     ],
     "/submit/page": [
       "static/chunks/webpack-88c661146243e9bc.js",
@@ -86,15 +95,6 @@
       "static/chunks/553-b8eb1db4f8bc5f13.js",
       "static/chunks/396-3008b2bbfe1de4ec.js",
       "static/chunks/app/submit/page-653a330bf2bb60ec.js"
-    ],
-    "/tournaments/page": [
-      "static/chunks/webpack-88c661146243e9bc.js",
-      "static/chunks/fd9d1056-ea4f4f4434d0f4ad.js",
-      "static/chunks/472-e1f527bcae852e01.js",
-      "static/chunks/main-app-9b4cc9751f3e054a.js",
-      "static/chunks/553-b8eb1db4f8bc5f13.js",
-      "static/chunks/396-3008b2bbfe1de4ec.js",
-      "static/chunks/app/tournaments/page-dc7b51e2163a217c.js"
     ],
     "/page": [
       "static/chunks/webpack-88c661146243e9bc.js",

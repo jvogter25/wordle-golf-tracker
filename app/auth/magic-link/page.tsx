@@ -15,102 +15,79 @@ export default function MagicLinkCallbackPage() {
         console.log('🔄 Magic Link Callback: Auth callback started')
         console.log('🔍 Magic Link Callback: Current URL:', window.location.href)
         
-        // Get the current URL hash and search params
-        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        // Get URL parameters
         const searchParams = new URLSearchParams(window.location.search)
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
         
-        console.log('🔍 Magic Link Callback: Hash params:', Object.fromEntries(hashParams))
         console.log('🔍 Magic Link Callback: Search params:', Object.fromEntries(searchParams))
+        console.log('🔍 Magic Link Callback: Hash params:', Object.fromEntries(hashParams))
         
         // Check for error in URL
-        const error = hashParams.get('error') || searchParams.get('error')
+        const error = searchParams.get('error') || hashParams.get('error')
+        const errorDescription = searchParams.get('error_description') || hashParams.get('error_description')
+        
         if (error) {
-          console.error('❌ Magic Link Callback: Auth error from URL:', error)
+          console.error('❌ Magic Link Callback: Auth error from URL:', error, errorDescription)
           setStatus('error')
-          setMessage(`Authentication failed: ${error}`)
+          setMessage(`Authentication failed: ${error}${errorDescription ? ` - ${errorDescription}` : ''}`)
           setTimeout(() => router.push('/auth/login'), 3000)
           return
         }
 
-        // Check for access token in hash (magic link flow)
-        const accessToken = hashParams.get('access_token')
-        const refreshToken = hashParams.get('refresh_token')
+        // For PKCE flow, Supabase handles the token exchange automatically
+        // We just need to wait a moment and then check for the session
+        console.log('⏳ Magic Link Callback: Waiting for Supabase to process PKCE token...')
         
-        if (accessToken && refreshToken) {
-          console.log('✅ Magic Link Callback: Found tokens in URL, setting session...')
+        // Wait a bit for Supabase to process the authentication
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        // Check for session multiple times with retries
+        let session = null
+        let attempts = 0
+        const maxAttempts = 5
+        
+        while (!session && attempts < maxAttempts) {
+          attempts++
+          console.log(`🔍 Magic Link Callback: Checking for session (attempt ${attempts}/${maxAttempts})...`)
           
-          // Set the session using the tokens from the URL
-          const { data, error: sessionError } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken
-          })
+          const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
           
           if (sessionError) {
             console.error('❌ Magic Link Callback: Session error:', sessionError)
-            setStatus('error')
-            setMessage('Failed to establish session')
-            setTimeout(() => router.push('/auth/login'), 3000)
-            return
-          }
-
-          if (data.session) {
-            console.log('✅ Magic Link Callback: Magic link authentication successful:', data.session.user.email)
-            console.log('✅ Magic Link Callback: Session established:', data.session.access_token.substring(0, 20) + '...')
-            
-            setStatus('success')
-            setMessage('Successfully signed in! Redirecting...')
-            
-            // Wait a bit longer to ensure session is fully established
-            console.log('⏳ Magic Link Callback: Waiting for session to be fully established...')
-            await new Promise(resolve => setTimeout(resolve, 2000))
-            
-            // Verify session is still valid before redirecting
-            const { data: verifyData, error: verifyError } = await supabase.auth.getSession()
-            if (verifyError || !verifyData.session) {
-              console.error('❌ Magic Link Callback: Session verification failed:', verifyError)
-              setStatus('error')
-              setMessage('Session verification failed')
-              setTimeout(() => router.push('/auth/login'), 3000)
-              return
-            }
-            
-            console.log('✅ Magic Link Callback: Session verified, redirecting to home page...')
-            
-            // Force a full page reload to ensure CSS and auth state are properly loaded
-            window.location.href = '/'
-            return
+          } else if (sessionData.session) {
+            session = sessionData.session
+            console.log('✅ Magic Link Callback: Session found:', session.user.email)
+            break
+          } else {
+            console.log('⏳ Magic Link Callback: No session yet, waiting...')
+            // Wait before next attempt
+            await new Promise(resolve => setTimeout(resolve, 1000))
           }
         }
 
-        // Fallback: try to get existing session
-        console.log('🔍 Magic Link Callback: No tokens in URL, checking for existing session...')
-        const { data: sessionData, error: getSessionError } = await supabase.auth.getSession()
-        
-        if (getSessionError) {
-          console.error('❌ Magic Link Callback: Get session error:', getSessionError)
-          setStatus('error')
-          setMessage('Failed to verify session')
-          setTimeout(() => router.push('/auth/login'), 3000)
-          return
-        }
-
-        if (sessionData.session) {
-          console.log('✅ Magic Link Callback: Existing session found:', sessionData.session.user.email)
+        if (session) {
+          console.log('✅ Magic Link Callback: Authentication successful!')
+          console.log('✅ Magic Link Callback: User:', session.user.email)
+          console.log('✅ Magic Link Callback: Session expires at:', new Date(session.expires_at! * 1000).toLocaleString())
+          
           setStatus('success')
-          setMessage('Already signed in! Redirecting...')
+          setMessage('Successfully signed in! Redirecting...')
+          
+          // Wait a moment to show success message
+          await new Promise(resolve => setTimeout(resolve, 1500))
+          
+          console.log('🏠 Magic Link Callback: Redirecting to home page...')
           
           // Force a full page reload to ensure CSS and auth state are properly loaded
-          setTimeout(() => {
-            window.location.href = '/'
-          }, 1000)
+          window.location.href = '/'
           return
         }
 
-        // No valid session found
-        console.log('ℹ️ Magic Link Callback: No valid session, redirecting to login')
+        // If we get here, authentication failed
+        console.log('❌ Magic Link Callback: No session found after all attempts')
         setStatus('error')
-        setMessage('No valid authentication found')
-        setTimeout(() => router.push('/auth/login'), 2000)
+        setMessage('Authentication failed - no session established')
+        setTimeout(() => router.push('/auth/login'), 3000)
         
       } catch (error) {
         console.error('❌ Magic Link Callback: Unexpected error in auth callback:', error)
@@ -154,7 +131,7 @@ export default function MagicLinkCallbackPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="text-center p-6">
-        <div className="spinner mx-auto mb-4"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
         <h2 className="text-xl font-semibold text-gray-900 mb-2">Signing you in...</h2>
         <p className="text-gray-600">Please wait while we verify your account.</p>
       </div>
