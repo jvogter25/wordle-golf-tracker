@@ -215,4 +215,7 @@ export default function HomePage() {
       </div>
     </div>
   )
-} 
+}
+
+// Force Vercel deployment - underlines should be fixed
+export const dynamic = 'force-dynamic' 
