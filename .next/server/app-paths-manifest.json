@@ -1,1 +1,14 @@
-{}
+{
+  "/_not-found": "app/_not-found.js",
+  "/auth/callback/page": "app/auth/callback/page.js",
+  "/auth/login/page": "app/auth/login/page.js",
+  "/groups/[id]/page": "app/groups/[id]/page.js",
+  "/auth/signup/page": "app/auth/signup/page.js",
+  "/leaderboard/page": "app/leaderboard/page.js",
+  "/groups/page": "app/groups/page.js",
+  "/page": "app/page.js",
+  "/profile/page": "app/profile/page.js",
+  "/submit/page": "app/submit/page.js",
+  "/tournaments/page": "app/tournaments/page.js",
+  "/icon/route": "app/icon/route.js"
+}
