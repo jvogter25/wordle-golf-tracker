@@ -31,17 +31,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         console.log('🔄 AuthContext: Initializing auth...')
         
-        // Get initial session
-        const { data: { session: initialSession }, error } = await supabase.auth.getSession()
+        // Get initial session with retry logic
+        let initialSession = null
+        let attempts = 0
+        const maxAttempts = 3
         
-        if (error) {
-          console.error('❌ AuthContext: Error getting initial session:', error)
-        } else if (initialSession) {
-          console.log('✅ AuthContext: Initial session found:', initialSession.user.email)
-          setSession(initialSession)
-          setUser(initialSession.user)
+        while (!initialSession && attempts < maxAttempts) {
+          attempts++
+          console.log(`🔄 AuthContext: Getting session attempt ${attempts}/${maxAttempts}`)
+          
+          const { data: { session }, error } = await supabase.auth.getSession()
+          
+          if (error) {
+            console.error(`❌ AuthContext: Error getting session (attempt ${attempts}):`, error)
+            if (attempts < maxAttempts) {
+              await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1s before retry
+            }
+          } else if (session) {
+            initialSession = session
+            console.log('✅ AuthContext: Initial session found:', session.user.email)
+          } else {
+            console.log(`ℹ️ AuthContext: No session found (attempt ${attempts})`)
+            if (attempts < maxAttempts) {
+              await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1s before retry
+            }
+          }
+        }
+        
+        if (initialSession) {
+          // Validate session is not expired
+          const now = Math.floor(Date.now() / 1000)
+          if (initialSession.expires_at && initialSession.expires_at > now) {
+            console.log('✅ AuthContext: Session is valid, expires at:', new Date(initialSession.expires_at * 1000).toLocaleString())
+            setSession(initialSession)
+            setUser(initialSession.user)
+          } else {
+            console.log('⚠️ AuthContext: Session expired, attempting refresh...')
+            try {
+              const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession()
+              if (refreshError) throw refreshError
+              
+              if (refreshedSession) {
+                console.log('✅ AuthContext: Session refreshed successfully')
+                setSession(refreshedSession)
+                setUser(refreshedSession.user)
+              } else {
+                console.log('ℹ️ AuthContext: No session after refresh')
+                setSession(null)
+                setUser(null)
+              }
+            } catch (refreshError) {
+              console.error('❌ AuthContext: Session refresh failed:', refreshError)
+              setSession(null)
+              setUser(null)
+            }
+          }
         } else {
-          console.log('ℹ️ AuthContext: No initial session found')
+          console.log('ℹ️ AuthContext: No initial session found after all attempts')
+          setSession(null)
+          setUser(null)
         }
         
         // Set up auth state change listener
@@ -49,15 +97,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           async (event, session) => {
             console.log('🔄 AuthContext: Auth state change:', event, session?.user?.email || 'no user')
             
-            if (session) {
-              console.log('✅ AuthContext: Session updated:', {
-                user: session.user.email,
-                expiresAt: new Date(session.expires_at! * 1000).toLocaleString()
-              })
-              setSession(session)
-              setUser(session.user)
-            } else {
-              console.log('ℹ️ AuthContext: Session cleared')
+            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+              if (session) {
+                console.log('✅ AuthContext: Session updated:', {
+                  user: session.user.email,
+                  expiresAt: new Date(session.expires_at! * 1000).toLocaleString(),
+                  event
+                })
+                setSession(session)
+                setUser(session.user)
+              }
+            } else if (event === 'SIGNED_OUT') {
+              console.log('ℹ️ AuthContext: User signed out')
               setSession(null)
               setUser(null)
             }
@@ -67,20 +118,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         )
 
-        // Set loading to false after initial check, but with a longer timeout for magic link scenarios
-        const timeoutId = setTimeout(() => {
-          console.log('⏰ AuthContext: Loading timeout reached, forcing loading to false')
-          setLoading(false)
-        }, 8000) // Increased from 5000 to 8000ms to account for magic link delays
-
-        // If we have a session immediately, clear the timeout
-        if (initialSession) {
-          clearTimeout(timeoutId)
-          setLoading(false)
-        }
+        // Set loading to false after initial check
+        setLoading(false)
 
         return () => {
-          clearTimeout(timeoutId)
           subscription.unsubscribe()
         }
         
@@ -92,32 +133,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initializeAuth()
 
-    // Set up periodic session refresh (every 30 minutes)
-    const refreshInterval = setInterval(async () => {
-      const { data: { session: currentSession } } = await supabase.auth.getSession()
-      if (currentSession) {
-        const expiresAt = new Date(currentSession.expires_at! * 1000)
-        const now = new Date()
-        const timeUntilExpiry = expiresAt.getTime() - now.getTime()
+    // Set up periodic session validation (every 5 minutes)
+    const validationInterval = setInterval(async () => {
+      if (session) {
+        const now = Math.floor(Date.now() / 1000)
+        const expiresAt = session.expires_at || 0
+        const timeUntilExpiry = expiresAt - now
         
-        console.log('🔄 AuthContext: Session check - expires at:', expiresAt.toLocaleString())
+        console.log('🔄 AuthContext: Session validation - expires in:', Math.floor(timeUntilExpiry / 60), 'minutes')
         
-        // Refresh if expires within 10 minutes
-        if (timeUntilExpiry < 10 * 60 * 1000) {
+        // If session expires within 10 minutes, refresh it
+        if (timeUntilExpiry < 10 * 60) {
           console.log('🔄 AuthContext: Session expiring soon, refreshing...')
           try {
-            await refreshSession()
+            const { data: { session: refreshedSession }, error } = await supabase.auth.refreshSession()
+            if (error) throw error
+            
+            if (refreshedSession) {
+              console.log('✅ AuthContext: Session refreshed during validation')
+              setSession(refreshedSession)
+              setUser(refreshedSession.user)
+            }
           } catch (error) {
-            console.error('❌ AuthContext: Session refresh failed:', error)
+            console.error('❌ AuthContext: Session refresh failed during validation:', error)
+            // Don't clear session here, let the auth state change handler deal with it
           }
         }
       }
-    }, 30 * 60 * 1000) // 30 minutes
+    }, 5 * 60 * 1000) // 5 minutes
 
     return () => {
-      clearInterval(refreshInterval)
+      clearInterval(validationInterval)
     }
-  }, [])
+  }, [session])
 
   const signOut = async () => {
     try {
