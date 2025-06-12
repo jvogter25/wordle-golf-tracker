@@ -71,6 +71,7 @@ body {
 .text-blue-600 { color: #3182ce; }
 .text-green-700 { color: #2f855a; }
 .text-red-700 { color: #c53030; }
+.no-underline { text-decoration: none !important; }
 
 /* Primary colors - Blue theme */
 .text-primary-500 { color: #3182ce !important; }
