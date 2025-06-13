@@ -97,19 +97,31 @@ export default function TournamentsPage() {
       const { data: tournamentsData } = await supabase
         .from('tournaments')
         .select('*')
-        .order('start', { ascending: false });
-      // For each tournament, fetch leaderboard
-      const tournamentsWithLeaders = await Promise.all(
-        (tournamentsData || []).map(async (t) => {
-          const { data: leaderboard } = await supabase.rpc('get_tournament_leaderboard', { tournament_id: t.id });
-          return { ...t, leaderboard: leaderboard || [] };
-        })
-      );
-      setTournaments(tournamentsWithLeaders);
+        .order('start_date', { ascending: true });
+      setTournaments(tournamentsData || []);
       setLoading(false);
     };
     fetchTournaments();
   }, [supabase]);
+
+  // Helper to format date range
+  function formatDateRange(start, end) {
+    const s = new Date(start);
+    const e = new Date(end);
+    const pad = n => n.toString().padStart(2, '0');
+    return `${pad(s.getMonth()+1)}/${pad(s.getDate())} - ${pad(e.getMonth()+1)}/${pad(e.getDate())}`;
+  }
+
+  // Partition tournaments
+  const now = new Date();
+  const active = tournaments.filter(t => new Date(t.start_date) <= now && new Date(t.end_date) >= now && t.is_active);
+  const upcomingMajors = tournaments.filter(t => t.tournament_type === 'major' && new Date(t.start_date) > now);
+  const upcomingBirthdays = tournaments.filter(t => t.tournament_type === 'birthday' && new Date(t.start_date) > now);
+  const past = tournaments.filter(t => new Date(t.end_date) < now);
+
+  // Only show the next upcoming major and birthday
+  const nextMajor = upcomingMajors.length > 0 ? [upcomingMajors[0]] : [];
+  const nextBirthday = upcomingBirthdays.length > 0 ? [upcomingBirthdays[0]] : [];
 
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] p-4">
@@ -138,39 +150,59 @@ export default function TournamentsPage() {
           {loading ? (
             <div className="text-center py-8">Loading...</div>
           ) : (
-            <div className="grid gap-6">
-              {tournaments.map(t => (
-                <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block">
-                  <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border border-[hsl(var(--border))] hover:shadow-lg transition">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="font-semibold text-lg">{t.name} {t.type === 'birthday' && <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Birthday</span>}</div>
-                      <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start, t.end)}</div>
-                    </div>
-                    <div className="mb-2 text-sm">Phase: <span className="font-bold">{formatPhase(t.phase)}</span></div>
-                    {t.birthdayUser && <div className="mb-2 text-xs text-green-700">🎂 {t.birthdayUser} gets -0.5 strokes/day</div>}
-                    <div className="mt-2">
-                      <div className="font-semibold mb-1">Leaderboard</div>
-                      <table className="w-full text-left">
-                        <thead>
-                          <tr>
-                            <th className="py-1">Name</th>
-                            <th className="py-1">Score</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {t.leaderboard.map((p: any) => (
-                            <tr key={p.id}>
-                              <td className="py-1">{p.display_name}</td>
-                              <td className="py-1">{p.score}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
+            <>
+              {/* Active Tournament */}
+              {active.length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold mb-2">Active Tournament</h3>
+                  {active.map(t => (
+                    <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block mb-4">
+                      <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border-2 border-green-500 hover:shadow-lg transition">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="font-semibold text-lg">{t.name} {t.tournament_type === 'birthday' && <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Birthday</span>}</div>
+                          <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
+                        </div>
+                        <div className="mb-2 text-sm">Phase: <span className="font-bold">Active</span></div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {/* Upcoming Tournaments */}
+              {(nextMajor.length > 0 || nextBirthday.length > 0) && (
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold mb-2">Upcoming Tournaments</h3>
+                  {[...nextMajor, ...nextBirthday].map(t => (
+                    <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block mb-4">
+                      <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border-2 border-yellow-400 hover:shadow-lg transition">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="font-semibold text-lg">{t.name} {t.tournament_type === 'birthday' && <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Birthday</span>}</div>
+                          <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
+                        </div>
+                        <div className="mb-2 text-sm">Phase: <span className="font-bold">Upcoming</span></div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {/* Past Tournaments */}
+              {past.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Past Tournaments</h3>
+                  {past.slice().reverse().map(t => (
+                    <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block mb-4">
+                      <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border border-[hsl(var(--border))] hover:shadow-lg transition">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="font-semibold text-lg">{t.name} {t.tournament_type === 'birthday' && <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Birthday</span>}</div>
+                          <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
+                        </div>
+                        <div className="mb-2 text-sm">Phase: <span className="font-bold">Completed</span></div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

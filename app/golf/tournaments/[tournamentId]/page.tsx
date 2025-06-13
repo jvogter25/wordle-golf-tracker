@@ -65,6 +65,7 @@ function WordleHeader({ label }: { label: string }) {
 export default function TournamentLeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [tournamentName, setTournamentName] = useState('');
+  const [tournamentDates, setTournamentDates] = useState('');
   const [loading, setLoading] = useState(true);
   const supabase = createClientComponentClient<Database>();
   const params = useParams();
@@ -76,10 +77,16 @@ export default function TournamentLeaderboardPage() {
       // Fetch tournament info
       const { data: tournamentData } = await supabase
         .from('tournaments')
-        .select('name')
+        .select('name, start_date, end_date')
         .eq('id', tournamentId)
         .single();
       setTournamentName(tournamentData?.name || 'Tournament');
+      if (tournamentData?.start_date && tournamentData?.end_date) {
+        const s = new Date(tournamentData.start_date);
+        const e = new Date(tournamentData.end_date);
+        const pad = n => n.toString().padStart(2, '0');
+        setTournamentDates(`${pad(s.getMonth()+1)}/${pad(s.getDate())} - ${pad(e.getMonth()+1)}/${pad(e.getDate())}`);
+      }
       // Fetch leaderboard
       const { data: leaderboardData } = await supabase.rpc('get_tournament_leaderboard', { tournament_id: tournamentId });
       setLeaderboard(leaderboardData || []);
@@ -112,6 +119,11 @@ export default function TournamentLeaderboardPage() {
         <div className="mb-2">
           <WordleHeader label={tournamentName.toUpperCase()} />
           <WordleHeader label="LEADERBOARD" />
+          {tournamentDates && (
+            <div className="text-center text-sm text-[hsl(var(--muted-foreground))] mb-4" style={{marginTop: '-1.5rem'}}>
+              {tournamentDates}
+            </div>
+          )}
         </div>
         <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-4 md:p-6 mb-6 border border-[hsl(var(--border))]">
           <h2 className="text-2xl font-bold text-[hsl(var(--foreground))] mb-4">{tournamentName}</h2>
