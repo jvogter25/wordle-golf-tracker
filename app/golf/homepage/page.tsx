@@ -5,14 +5,6 @@ import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import Head from 'next/head';
 
-const sampleLeaderboard = [
-  { name: 'Tiger Woods', handicap: '+2.1', score: 68, avatarUrl: 'https://placekitten.com/40/40' },
-  { name: 'Annika Sörenstam', handicap: '+1.5', score: 70, avatarUrl: 'https://placekitten.com/41/41' },
-  { name: 'Rory McIlroy', handicap: '+3.0', score: 67, avatarUrl: 'https://placekitten.com/42/42' },
-  { name: 'Lexi Thompson', handicap: '+0.8', score: 72, avatarUrl: 'https://placekitten.com/43/43' },
-  { name: 'Brooks Koepka', handicap: '+2.7', score: 69, avatarUrl: 'https://placekitten.com/44/44' },
-];
-
 const wordleTiles = [
   { letter: 'L', color: 'bg-[#6aaa64]' }, // green
   { letter: 'E', color: 'bg-[#c9b458]' }, // yellow

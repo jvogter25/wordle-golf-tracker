@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { Database } from '@/types/supabase';
 
 const navLinks = [
   { href: '/golf/homepage', label: 'Home' },
@@ -59,42 +61,6 @@ function WordleHeader({ label }: { label: string }) {
   );
 }
 
-// Mock tournament data
-const tournaments = [
-  {
-    id: 'masters-2024',
-    name: 'The Masters',
-    type: 'major',
-    start: '2024-04-08',
-    end: '2024-04-14',
-    phase: 'qualifying', // 'qualifying', 'cut', 'tournament', 'finished'
-    participants: [
-      { id: '1', name: 'Jake', score: 12 },
-      { id: '2', name: 'Annika', score: 14 },
-      { id: '3', name: 'Rory', score: 15 },
-      { id: '4', name: 'Lexi', score: 16 },
-    ],
-    cutLine: 2, // index of last player to make the cut
-    birthdayUser: null,
-  },
-  {
-    id: 'jake-bday-2024',
-    name: "Jake's Birthday Week",
-    type: 'birthday',
-    start: '2024-06-10',
-    end: '2024-06-16',
-    phase: 'tournament',
-    participants: [
-      { id: '1', name: 'Jake', score: 10 },
-      { id: '2', name: 'Annika', score: 13 },
-      { id: '3', name: 'Rory', score: 14 },
-      { id: '4', name: 'Lexi', score: 15 },
-    ],
-    cutLine: 1,
-    birthdayUser: 'Jake',
-  },
-];
-
 function getTournamentPhase(tournament) {
   // This would use real date logic in production
   return tournament.phase;
@@ -120,7 +86,31 @@ function formatPhase(phase) {
   return phase.charAt(0).toUpperCase() + phase.slice(1);
 }
 
-export default function DevTournamentsPage() {
+export default function TournamentsPage() {
+  const [tournaments, setTournaments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClientComponentClient<Database>();
+
+  useEffect(() => {
+    const fetchTournaments = async () => {
+      setLoading(true);
+      const { data: tournamentsData } = await supabase
+        .from('tournaments')
+        .select('*')
+        .order('start', { ascending: false });
+      // For each tournament, fetch leaderboard
+      const tournamentsWithLeaders = await Promise.all(
+        (tournamentsData || []).map(async (t) => {
+          const { data: leaderboard } = await supabase.rpc('get_tournament_leaderboard', { tournament_id: t.id });
+          return { ...t, leaderboard: leaderboard || [] };
+        })
+      );
+      setTournaments(tournamentsWithLeaders);
+      setLoading(false);
+    };
+    fetchTournaments();
+  }, [supabase]);
+
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] p-4">
       <div className="max-w-4xl mx-auto">
@@ -145,39 +135,43 @@ export default function DevTournamentsPage() {
         <WordleHeader label="TOURNAMENTS" />
         <div className="mb-12">
           <h2 className="text-2xl font-bold mb-4">Tournaments</h2>
-          <div className="grid gap-6">
-            {tournaments.map(t => (
-              <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block">
-                <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border border-[hsl(var(--border))] hover:shadow-lg transition">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="font-semibold text-lg">{t.name} {t.type === 'birthday' && <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Birthday</span>}</div>
-                    <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start, t.end)}</div>
-                  </div>
-                  <div className="mb-2 text-sm">Phase: <span className="font-bold">{formatPhase(getTournamentPhase(t))}</span></div>
-                  {t.birthdayUser && <div className="mb-2 text-xs text-green-700">🎂 {t.birthdayUser} gets -0.5 strokes/day</div>}
-                  <div className="mt-2">
-                    <div className="font-semibold mb-1">Leaderboard</div>
-                    <table className="w-full text-left">
-                      <thead>
-                        <tr>
-                          <th className="py-1">Name</th>
-                          <th className="py-1">Score</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {getEligiblePlayers(t).map(p => (
-                          <tr key={p.id}>
-                            <td className="py-1">{p.name}</td>
-                            <td className="py-1">{p.score}</td>
+          {loading ? (
+            <div className="text-center py-8">Loading...</div>
+          ) : (
+            <div className="grid gap-6">
+              {tournaments.map(t => (
+                <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block">
+                  <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border border-[hsl(var(--border))] hover:shadow-lg transition">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-semibold text-lg">{t.name} {t.type === 'birthday' && <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Birthday</span>}</div>
+                      <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start, t.end)}</div>
+                    </div>
+                    <div className="mb-2 text-sm">Phase: <span className="font-bold">{formatPhase(t.phase)}</span></div>
+                    {t.birthdayUser && <div className="mb-2 text-xs text-green-700">🎂 {t.birthdayUser} gets -0.5 strokes/day</div>}
+                    <div className="mt-2">
+                      <div className="font-semibold mb-1">Leaderboard</div>
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr>
+                            <th className="py-1">Name</th>
+                            <th className="py-1">Score</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {t.leaderboard.map((p: any) => (
+                            <tr key={p.id}>
+                              <td className="py-1">{p.display_name}</td>
+                              <td className="py-1">{p.score}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

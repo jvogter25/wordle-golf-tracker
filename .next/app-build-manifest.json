@@ -11,31 +11,6 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/golf/homepage/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/golf/homepage/page.js"
-    ],
-    "/golf/leaderboard/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/golf/leaderboard/page.js"
-    ],
-    "/golf/tournaments/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/golf/tournaments/page.js"
-    ],
-    "/golf/tournaments/[tournamentId]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/golf/tournaments/[tournamentId]/page.js"
-    ],
-    "/golf/player/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/golf/player/page.js"
-    ],
     "/auth/login/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -46,15 +21,30 @@
       "static/chunks/main-app.js",
       "static/chunks/app/auth/signup/page.js"
     ],
-    "/golf/clubhouse/page": [
+    "/golf/player/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/golf/clubhouse/page.js"
+      "static/chunks/app/golf/player/page.js"
+    ],
+    "/golf/homepage/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/golf/homepage/page.js"
     ],
     "/golf/clubhouse/[groupId]/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/golf/clubhouse/[groupId]/page.js"
+    ],
+    "/golf/leaderboard/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/golf/leaderboard/page.js"
+    ],
+    "/golf/clubhouse/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/golf/clubhouse/page.js"
     ]
   }
 }

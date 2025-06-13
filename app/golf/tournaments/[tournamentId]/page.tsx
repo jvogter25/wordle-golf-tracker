@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { Database } from '@/types/supabase';
 
 const navLinks = [
   { href: '/golf/homepage', label: 'Home' },
@@ -60,16 +62,32 @@ function WordleHeader({ label }: { label: string }) {
   );
 }
 
-// Mock tournament leaderboard data
-const tournamentLeaderboard = [
-  { id: 1, name: 'Jake Vogter', avatar: '/golf/jake-avatar.jpg', score: 12 },
-  { id: 2, name: 'Annika Sörenstam', avatar: 'https://randomuser.me/api/portraits/women/44.jpg', score: 14 },
-  { id: 3, name: 'Rory McIlroy', avatar: 'https://randomuser.me/api/portraits/men/65.jpg', score: 15 },
-  { id: 4, name: 'Lexi Thompson', avatar: 'https://randomuser.me/api/portraits/women/68.jpg', score: 16 },
-];
-
 export default function TournamentLeaderboardPage() {
-  const tournamentName = 'The Masters'; // Replace with dynamic name in real app
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [tournamentName, setTournamentName] = useState('');
+  const [loading, setLoading] = useState(true);
+  const supabase = createClientComponentClient<Database>();
+  const params = useParams();
+  const tournamentId = params?.tournamentId;
+
+  useEffect(() => {
+    const fetchLeaderboard = async () => {
+      setLoading(true);
+      // Fetch tournament info
+      const { data: tournamentData } = await supabase
+        .from('tournaments')
+        .select('name')
+        .eq('id', tournamentId)
+        .single();
+      setTournamentName(tournamentData?.name || 'Tournament');
+      // Fetch leaderboard
+      const { data: leaderboardData } = await supabase.rpc('get_tournament_leaderboard', { tournament_id: tournamentId });
+      setLeaderboard(leaderboardData || []);
+      setLoading(false);
+    };
+    if (tournamentId) fetchLeaderboard();
+  }, [supabase, tournamentId]);
+
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] p-4">
       <div className="max-w-4xl mx-auto">
@@ -92,7 +110,7 @@ export default function TournamentLeaderboardPage() {
           </div>
         </nav>
         <div className="mb-2">
-          <WordleHeader label="TOURNAMENT" />
+          <WordleHeader label={tournamentName.toUpperCase()} />
           <WordleHeader label="LEADERBOARD" />
         </div>
         <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-4 md:p-6 mb-6 border border-[hsl(var(--border))]">
@@ -103,23 +121,24 @@ export default function TournamentLeaderboardPage() {
               <div className="flex-1 text-left pl-2">Name</div>
               <div className="w-16 text-right">Score</div>
             </div>
-            {tournamentLeaderboard.map((player, idx) => {
-              let pos: string = String(idx + 1);
-              if (idx > 0 && tournamentLeaderboard[idx].score === tournamentLeaderboard[idx - 1].score) {
-                pos = `T${idx}`;
-              }
-              const nameClass = idx < 3 ? 'text-[#6aaa64] font-semibold' : 'text-[hsl(var(--foreground))]';
-              return (
-                <div key={player.id} className="flex items-center py-4 px-2 bg-[hsl(var(--muted))] rounded-xl my-2 shadow-sm">
-                  <div className="w-10 text-left font-bold text-base md:text-lg">{pos}</div>
-                  <div className="flex-1 flex items-center pl-2">
-                    <img src={player.avatar} alt={player.name} className="w-8 h-8 rounded-full border-2 border-[hsl(var(--primary))] mr-2" />
-                    <span className={`truncate text-base md:text-lg ${nameClass}`}>{player.name}</span>
+            {loading ? (
+              <div className="text-center py-8">Loading...</div>
+            ) : (
+              leaderboard.map((player, idx) => {
+                let pos: string = String(idx + 1);
+                const nameClass = idx < 3 ? 'text-[#6aaa64] font-semibold' : 'text-[hsl(var(--foreground))]';
+                return (
+                  <div key={player.id} className="flex items-center py-4 px-2 bg-[hsl(var(--muted))] rounded-xl my-2 shadow-sm">
+                    <div className="w-10 text-left font-bold text-base md:text-lg">{pos}</div>
+                    <div className="flex-1 flex items-center pl-2">
+                      <img src={player.avatar_url || '/golf/jake-avatar.jpg'} alt={player.display_name} className="w-8 h-8 rounded-full border-2 border-[hsl(var(--primary))] mr-2" />
+                      <span className={`truncate text-base md:text-lg ${nameClass}`}>{player.display_name}</span>
+                    </div>
+                    <div className="w-16 text-right text-xl">{player.score}</div>
                   </div>
-                  <div className="w-16 text-right text-xl">{player.score}</div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
       </div>

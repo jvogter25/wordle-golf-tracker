@@ -80,7 +80,7 @@ export default function DevPlayerCardPage() {
   const [displayName, setDisplayName] = useState('Jake Vogter');
   const [editingName, setEditingName] = useState(false);
   const [profilePic, setProfilePic] = useState('/golf/jake-avatar.jpg');
-  const [handicap, setHandicap] = useState('+1.5'); // TODO: fetch from Supabase
+  const [handicap, setHandicap] = useState<string>('');
   const [bio, setBio] = useState('');
   const [groups, setGroups] = useState([]);
   const { user, loading: authLoading } = useAuth();
@@ -126,6 +126,35 @@ export default function DevPlayerCardPage() {
       }
     };
     fetchMonthlyWins();
+  }, [user]);
+
+  useEffect(() => {
+    const fetchHandicap = async () => {
+      if (!user) return;
+      // Fetch last 20 scores for the user
+      const { data: scores, error } = await supabase
+        .from('scores')
+        .select('raw_score')
+        .eq('user_id', user.id)
+        .order('puzzle_date', { ascending: false })
+        .limit(20);
+      if (error || !scores) {
+        setHandicap('N/A');
+        return;
+      }
+      // USGA: handicap = (average of best 8 differentials) * 0.96
+      // For Wordle Golf, let's use raw_score as the differential
+      const sorted = scores.map(s => s.raw_score).sort((a, b) => a - b);
+      const best8 = sorted.slice(0, 8);
+      if (best8.length < 1) {
+        setHandicap('N/A');
+        return;
+      }
+      const avg = best8.reduce((sum, s) => sum + s, 0) / best8.length;
+      const usgaHandicap = avg * 0.96;
+      setHandicap(usgaHandicap > 0 ? `+${usgaHandicap.toFixed(1)}` : usgaHandicap.toFixed(1));
+    };
+    fetchHandicap();
   }, [user]);
 
   // Profile pic upload handler
