@@ -87,9 +87,24 @@ export default function DevPlayerCardPage() {
   const [tournamentWins, setTournamentWins] = useState<TournamentWin[]>([]);
   const [monthlyWins, setMonthlyWins] = useState<{ year: number; month: number }[]>([]);
   const supabase = createClientComponentClient<Database>();
+  const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (!error && data) {
+        setProfile(data);
+        setDisplayName(data.display_name || '');
+        if (data.avatar_url) setProfilePic(data.avatar_url);
+      }
+    };
     if (!authLoading && user) {
+      fetchProfile();
       getUserGroups().then(setGroups);
     }
   }, [user, authLoading]);
@@ -168,6 +183,26 @@ export default function DevPlayerCardPage() {
     }
   };
 
+  const handleUpdateDisplayName = async () => {
+    if (!displayName.trim() || !user) return;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ display_name: displayName.trim() })
+      .eq('id', user.id);
+    if (!error) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (data) {
+        setProfile(data);
+        setDisplayName(data.display_name || '');
+      }
+      setEditingName(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] p-4">
       <div className="max-w-2xl mx-auto">
@@ -205,7 +240,7 @@ export default function DevPlayerCardPage() {
                   className="border rounded-md px-2 py-1 text-lg font-bold text-center"
                   value={displayName}
                   onChange={e => setDisplayName(e.target.value)}
-                  onBlur={() => setEditingName(false)}
+                  onBlur={handleUpdateDisplayName}
                   autoFocus
                 />
               ) : (

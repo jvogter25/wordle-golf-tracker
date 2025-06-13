@@ -157,6 +157,8 @@ export default function TournamentsPage() {
           <h2 className="text-2xl font-bold mb-4">Tournaments</h2>
           {loading ? (
             <div className="text-center py-8">Loading...</div>
+          ) : tournaments.length === 0 ? (
+            <div className="text-center py-8 text-[hsl(var(--muted-foreground))]">No tournaments found. Please check back later!</div>
           ) : (
             <>
               {/* Active Tournament */}
@@ -176,15 +178,32 @@ export default function TournamentsPage() {
                   ))}
                 </div>
               )}
-              {/* Upcoming Tournaments */}
-              {(nextMajor.length > 0 || nextBirthday.length > 0) && (
+              {/* Next Upcoming Major Tournament */}
+              {nextMajor.length > 0 && (
                 <div className="mb-8">
-                  <h3 className="text-lg font-semibold mb-2">Upcoming Tournaments</h3>
-                  {[...nextMajor, ...nextBirthday].map(t => (
+                  <h3 className="text-lg font-semibold mb-2">Next Major Tournament</h3>
+                  {nextMajor.map(t => (
+                    <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block mb-4">
+                      <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border-2 border-blue-400 hover:shadow-lg transition">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="font-semibold text-lg">{t.name}</div>
+                          <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
+                        </div>
+                        <div className="mb-2 text-sm">Phase: <span className="font-bold">Upcoming</span></div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {/* Next Upcoming Birthday Tournament */}
+              {nextBirthday.length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold mb-2">Next Birthday Tournament</h3>
+                  {nextBirthday.map(t => (
                     <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block mb-4">
                       <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border-2 border-yellow-400 hover:shadow-lg transition">
                         <div className="flex items-center justify-between mb-2">
-                          <div className="font-semibold text-lg">{t.name} {t.tournament_type === 'birthday' && <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Birthday</span>}</div>
+                          <div className="font-semibold text-lg">{t.name} <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Birthday</span></div>
                           <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
                         </div>
                         <div className="mb-2 text-sm">Phase: <span className="font-bold">Upcoming</span></div>
