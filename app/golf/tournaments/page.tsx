@@ -94,10 +94,18 @@ export default function TournamentsPage() {
   useEffect(() => {
     const fetchTournaments = async () => {
       setLoading(true);
-      const { data: tournamentsData } = await supabase
+      console.log('Fetching tournaments...');
+      const { data: tournamentsData, error } = await supabase
         .from('tournaments')
         .select('*')
         .order('start_date', { ascending: true });
+      
+      if (error) {
+        console.error('Error fetching tournaments:', error);
+      } else {
+        console.log('Tournaments data:', tournamentsData);
+      }
+      
       setTournaments(tournamentsData || []);
       setLoading(false);
     };

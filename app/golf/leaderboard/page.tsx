@@ -79,15 +79,31 @@ export default function LeaderboardPage() {
   useEffect(() => {
     const fetchLeaderboards = async () => {
       setLoading(true);
+      console.log('Fetching leaderboards...');
+      
       // Fetch all-time leaderboard
-      const { data: allTimeData } = await supabase.rpc('get_all_time_leaderboard');
+      const { data: allTimeData, error: allTimeError } = await supabase.rpc('get_all_time_leaderboard');
+      if (allTimeError) {
+        console.error('Error fetching all-time leaderboard:', allTimeError);
+      } else {
+        console.log('All-time leaderboard data:', allTimeData);
+      }
       setAllTime(allTimeData || []);
+
       // Fetch monthly leaderboard
       const now = new Date();
       const year = now.getFullYear();
       const month = now.getMonth() + 1;
-      const { data: monthlyData } = await supabase.rpc('get_monthly_leaderboard', { year, month });
+      console.log(`Fetching monthly leaderboard for ${year}-${month}...`);
+      
+      const { data: monthlyData, error: monthlyError } = await supabase.rpc('get_monthly_leaderboard', { year, month });
+      if (monthlyError) {
+        console.error('Error fetching monthly leaderboard:', monthlyError);
+      } else {
+        console.log('Monthly leaderboard data:', monthlyData);
+      }
       setMonthly(monthlyData || []);
+      
       setLoading(false);
     };
     fetchLeaderboards();

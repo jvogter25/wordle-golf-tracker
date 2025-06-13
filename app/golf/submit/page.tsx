@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { Database } from '@/types/supabase';
+import { useRouter } from 'next/navigation';
 
 function WordleHeader({ label }: { label: string }) {
   const colors = ['bg-[#6aaa64]', 'bg-[#c9b458]', 'bg-[#787c7e]'];
@@ -70,6 +73,59 @@ function BurgerMenu() {
 }
 
 export default function DevSubmitScorePage() {
+  const [attempts, setAttempts] = useState<number | ''>('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const router = useRouter();
+  const supabase = createClientComponentClient<Database>();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!attempts) return;
+
+    setSubmitting(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!user) throw new Error('Not logged in');
+
+      // Get current date in YYYY-MM-DD format
+      const today = new Date().toISOString().split('T')[0];
+
+      // Insert score
+      const { error: insertError } = await supabase
+        .from('scores')
+        .insert([
+          {
+            user_id: user.id,
+            score: attempts,
+            date: today,
+          }
+        ]);
+
+      if (insertError) throw insertError;
+
+      setSuccess(true);
+      setAttempts('');
+      
+      // Redirect to leaderboard after 2 seconds
+      setTimeout(() => {
+        router.push('/golf/leaderboard');
+      }, 2000);
+
+    } catch (err) {
+      console.error('Error submitting score:', err);
+      setError(err instanceof Error ? err.message : 'Failed to submit score');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] p-4">
       <div className="max-w-md mx-auto">
@@ -94,17 +150,38 @@ export default function DevSubmitScorePage() {
         <WordleHeader label="SUBMIT" />
         <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-8 border border-[hsl(var(--border))]">
           <h2 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-4">Submit Your Score</h2>
-          <form className="space-y-4">
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
+              Score submitted successfully! Redirecting to leaderboard...
+            </div>
+          )}
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-[hsl(var(--muted-foreground))] mb-1">Wordle Attempts</label>
-              <select className="w-full p-2 border border-[hsl(var(--border))] rounded-md bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]">
+              <select 
+                className="w-full p-2 border border-[hsl(var(--border))] rounded-md bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]"
+                value={attempts}
+                onChange={(e) => setAttempts(e.target.value ? Number(e.target.value) : '')}
+                disabled={submitting}
+              >
                 <option value="">Select attempts</option>
                 {attemptOptions.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.emoji} {opt.label}</option>
                 ))}
               </select>
             </div>
-            <button type="submit" className="w-full bg-[#6aaa64] text-white font-bold py-2 rounded-md hover:bg-[#5a9954] transition">Submit</button>
+            <button 
+              type="submit" 
+              className="w-full bg-[#6aaa64] text-white font-bold py-2 rounded-md hover:bg-[#5a9954] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={submitting || !attempts}
+            >
+              {submitting ? 'Submitting...' : 'Submit'}
+            </button>
           </form>
         </div>
       </div>
