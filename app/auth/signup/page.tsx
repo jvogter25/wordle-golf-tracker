@@ -7,13 +7,15 @@ import { supabase } from '../../../lib/supabase'
 export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [displayName, setDisplayName] = useState('')
+  const [password, setPassword] = useState('123456')
+  const [birthday, setBirthday] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!email.trim() || !displayName.trim()) {
+    if (!email.trim() || !displayName.trim() || !birthday.trim()) {
       setMessage('Please fill in all fields')
       return
     }
@@ -22,13 +24,13 @@ export default function SignupPage() {
     setMessage('')
 
     try {
-      // Send magic link for email verification
-      const { error } = await supabase.auth.signInWithOtp({
+      const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
+        password: password.trim(),
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/magic-link`,
           data: {
             display_name: displayName.trim(),
+            birthday: birthday.trim(),
           },
         },
       })
@@ -36,7 +38,7 @@ export default function SignupPage() {
       if (error) {
         setMessage(`Error: ${error.message}`)
       } else {
-        setMessage('Check your email for the verification link! After verifying, you\'ll be able to set up your password.')
+        setMessage('Account created! You can now log in.')
       }
     } catch (error) {
       setMessage('An unexpected error occurred')
@@ -85,6 +87,36 @@ export default function SignupPage() {
               placeholder="Enter your email"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               disabled={loading}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password (default: 123456)"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              disabled={loading}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="birthday" className="block text-sm font-medium text-gray-700 mb-2">
+              Birthday
+            </label>
+            <input
+              id="birthday"
+              type="date"
+              value={birthday}
+              onChange={(e) => setBirthday(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              disabled={loading}
+              required
             />
           </div>
 

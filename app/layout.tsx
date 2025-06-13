@@ -2,6 +2,7 @@ import React from 'react'
 import type { Metadata } from 'next'
 import './globals.css'
 import { AuthProvider } from '../contexts/AuthContext'
+import AuthGuard from '../components/AuthGuard'
 
 export const metadata: Metadata = {
   title: 'Wordle Golf Tracker',
@@ -17,7 +18,9 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased">
         <AuthProvider>
-          {children}
+          <AuthGuard>
+            {children}
+          </AuthGuard>
         </AuthProvider>
       </body>
     </html>

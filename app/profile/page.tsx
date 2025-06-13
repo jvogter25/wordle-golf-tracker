@@ -5,6 +5,23 @@ import Link from 'next/link'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 
+function WordleHeader({ label }: { label: string }) {
+  const colors = ['bg-[#6aaa64]', 'bg-[#c9b458]', 'bg-[#787c7e]'];
+  return (
+    <div className="flex justify-center gap-1 mb-8">
+      {label.split('').map((letter, idx) => (
+        <span
+          key={idx}
+          className={`${colors[idx % colors.length]} w-12 h-12 md:w-14 md:h-14 flex items-center justify-center rounded-md font-bold text-white text-2xl md:text-3xl shadow-[0_2px_4px_rgba(0,0,0,0.12)] select-none`}
+          style={{ fontFamily: 'Montserrat, Poppins, Arial, sans-serif', letterSpacing: '0.05em' }}
+        >
+          {letter}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const { user, loading: authLoading } = useAuth()
   const [profile, setProfile] = useState<any>(null)
@@ -189,6 +206,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-2xl mx-auto px-4 py-8">
+        <WordleHeader label="PROFILE" />
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Profile Settings</h1>
           <p className="text-gray-600">Manage your profile information</p>

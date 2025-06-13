@@ -2,7 +2,7 @@
   "version": 2,
   "buildCommand": "next build",
   "devCommand": "next dev",
-  "installCommand": "npm install",
+  "installCommand": "npm install --prefer-offline --no-audit --no-fund --retry 3 --retry-factor 2",
   "framework": "nextjs",
   "builds": [
     {
