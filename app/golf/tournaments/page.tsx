@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Database } from '@/types/supabase';
+import { useAuth } from '../../../contexts/AuthContext';
+import { supabase } from '../../../lib/supabase';
+import { getUserGroups } from '../../../lib/groups';
 
 const navLinks = [
   { href: '/golf/homepage', label: 'Home' },
@@ -87,38 +90,34 @@ function formatPhase(phase) {
 }
 
 export default function TournamentsPage() {
+  const { user, loading: authLoading } = useAuth();
+  const [groups, setGroups] = useState<any[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState('');
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClientComponentClient<Database>();
 
   useEffect(() => {
-    const fetchTournaments = async () => {
-      setLoading(true);
-      console.log('Fetching tournaments...');
-      const { data: tournamentsData, error } = await supabase
-        .from('tournaments')
-        .select('*')
-        .order('start_date', { ascending: true });
-      
-      if (error) {
-        console.error('Error fetching tournaments:', error);
-      } else {
-        console.log('Tournaments data:', tournamentsData);
-      }
-      
-      setTournaments(tournamentsData || []);
-      setLoading(false);
-    };
-    fetchTournaments();
-  }, [supabase]);
+    if (user) {
+      getUserGroups().then(setGroups);
+    }
+  }, [user]);
 
-  // Helper to format date range
-  function formatDateRange(start, end) {
-    const s = new Date(start);
-    const e = new Date(end);
-    const pad = n => n.toString().padStart(2, '0');
-    return `${pad(s.getMonth()+1)}/${pad(s.getDate())} - ${pad(e.getMonth()+1)}/${pad(e.getDate())}`;
-  }
+  useEffect(() => {
+    if (selectedGroup) {
+      fetchTournaments();
+    }
+  }, [selectedGroup]);
+
+  const fetchTournaments = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('tournaments')
+      .select('*')
+      .eq('year', new Date().getFullYear())
+      .order('start_date', { ascending: true });
+    setTournaments(data || []);
+    setLoading(false);
+  };
 
   // Partition tournaments
   const now = new Date();
@@ -127,7 +126,7 @@ export default function TournamentsPage() {
   const upcomingBirthdays = tournaments.filter(t => t.tournament_type === 'birthday' && new Date(t.start_date) > now);
   const past = tournaments.filter(t => new Date(t.end_date) < now);
 
-  // Only show the next upcoming major and birthday
+  // Only show the next upcoming major and birthday (for any group member)
   const nextMajor = upcomingMajors.length > 0 ? [upcomingMajors[0]] : [];
   const nextBirthday = upcomingBirthdays.length > 0 ? [upcomingBirthdays[0]] : [];
 
@@ -153,83 +152,83 @@ export default function TournamentsPage() {
           </div>
         </nav>
         <WordleHeader label="TOURNAMENTS" />
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold mb-4">Tournaments</h2>
-          {loading ? (
-            <div className="text-center py-8">Loading...</div>
-          ) : tournaments.length === 0 ? (
-            <div className="text-center py-8 text-[hsl(var(--muted-foreground))]">No tournaments found. Please check back later!</div>
-          ) : (
-            <>
-              {/* Active Tournament */}
-              {active.length > 0 && (
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold mb-2">Active Tournament</h3>
-                  {active.map(t => (
-                    <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block mb-4">
-                      <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border-2 border-green-500 hover:shadow-lg transition">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="font-semibold text-lg">{t.name} {t.tournament_type === 'birthday' && <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Birthday</span>}</div>
-                          <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
-                        </div>
-                        <div className="mb-2 text-sm">Phase: <span className="font-bold">Active</span></div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-              {/* Next Upcoming Major Tournament */}
-              {nextMajor.length > 0 && (
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold mb-2">Next Major Tournament</h3>
-                  {nextMajor.map(t => (
-                    <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block mb-4">
-                      <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border-2 border-blue-400 hover:shadow-lg transition">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="font-semibold text-lg">{t.name}</div>
-                          <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
-                        </div>
-                        <div className="mb-2 text-sm">Phase: <span className="font-bold">Upcoming</span></div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-              {/* Next Upcoming Birthday Tournament */}
-              {nextBirthday.length > 0 && (
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold mb-2">Next Birthday Tournament</h3>
-                  {nextBirthday.map(t => (
-                    <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block mb-4">
-                      <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border-2 border-yellow-400 hover:shadow-lg transition">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="font-semibold text-lg">{t.name} <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Birthday</span></div>
-                          <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
-                        </div>
-                        <div className="mb-2 text-sm">Phase: <span className="font-bold">Upcoming</span></div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-              {/* Past Tournaments */}
-              {past.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold mb-2">Past Tournaments</h3>
-                  {past.slice().reverse().map(t => (
-                    <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block mb-4">
-                      <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border border-[hsl(var(--border))] hover:shadow-lg transition">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="font-semibold text-lg">{t.name} {t.tournament_type === 'birthday' && <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Birthday</span>}</div>
-                          <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
-                        </div>
-                        <div className="mb-2 text-sm">Phase: <span className="font-bold">Completed</span></div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </>
+        <div className="mb-8">
+          {groups.length > 1 && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2">Select Group</label>
+              <select
+                className="p-2 border rounded"
+                value={selectedGroup}
+                onChange={e => setSelectedGroup(e.target.value)}
+              >
+                <option value="">Select a group</option>
+                {groups.map(g => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {/* Active Section */}
+          {active.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold mb-2">Active Tournament</h3>
+              {active.map(t => (
+                <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block mb-4">
+                  <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border-2 border-green-500 hover:shadow-lg transition">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-semibold text-lg">{t.name} {t.tournament_type === 'birthday' && <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Birthday</span>}</div>
+                      <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
+                    </div>
+                    <div className="mb-2 text-sm">Phase: <span className="font-bold">Active</span></div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+          {/* Upcoming Section */}
+          {(nextMajor.length > 0 || nextBirthday.length > 0) && (
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold mb-2">Upcoming Tournaments</h3>
+              {nextMajor.map(t => (
+                <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block mb-4">
+                  <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border-2 border-blue-400 hover:shadow-lg transition">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-semibold text-lg">{t.name}</div>
+                      <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
+                    </div>
+                    <div className="mb-2 text-sm">Phase: <span className="font-bold">Upcoming</span></div>
+                  </div>
+                </Link>
+              ))}
+              {nextBirthday.map(t => (
+                <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block mb-4">
+                  <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border-2 border-yellow-400 hover:shadow-lg transition">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-semibold text-lg">{t.name} <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Birthday</span></div>
+                      <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
+                    </div>
+                    <div className="mb-2 text-sm">Phase: <span className="font-bold">Upcoming</span></div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+          {/* Past Section */}
+          {past.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Past Tournaments</h3>
+              {past.slice().reverse().map(t => (
+                <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block mb-4">
+                  <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border border-[hsl(var(--border))] hover:shadow-lg transition">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-semibold text-lg">{t.name} {t.tournament_type === 'birthday' && <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Birthday</span>}</div>
+                      <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
+                    </div>
+                    <div className="mb-2 text-sm">Phase: <span className="font-bold">Completed</span></div>
+                  </div>
+                </Link>
+              ))}
+            </div>
           )}
         </div>
       </div>
