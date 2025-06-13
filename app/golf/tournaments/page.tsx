@@ -3,8 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Database } from '@/types/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { supabase } from '../../../lib/supabase';
 import { getUserGroups } from '../../../lib/groups';
@@ -64,29 +62,11 @@ function WordleHeader({ label }: { label: string }) {
   );
 }
 
-function getTournamentPhase(tournament) {
-  // This would use real date logic in production
-  return tournament.phase;
-}
-
-function getEligiblePlayers(tournament) {
-  if (tournament.phase === 'tournament') {
-    return tournament.participants.slice(0, tournament.cutLine + 1);
-  }
-  return tournament.participants;
-}
-
 function formatDateRange(start, end) {
   const s = new Date(start);
   const e = new Date(end);
   const pad = n => n.toString().padStart(2, '0');
   return `${pad(s.getMonth()+1)}/${pad(s.getDate())} - ${pad(e.getMonth()+1)}/${pad(e.getDate())}`;
-}
-
-function formatPhase(phase) {
-  if (phase === 'qualifying') return 'Qualifying';
-  if (phase === 'tournament') return 'Tournament';
-  return phase.charAt(0).toUpperCase() + phase.slice(1);
 }
 
 export default function TournamentsPage() {
@@ -129,6 +109,30 @@ export default function TournamentsPage() {
   // Only show the next upcoming major and birthday (for any group member)
   const nextMajor = upcomingMajors.length > 0 ? [upcomingMajors[0]] : [];
   const nextBirthday = upcomingBirthdays.length > 0 ? [upcomingBirthdays[0]] : [];
+
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Please sign in</h2>
+          <Link href="/auth/login" className="bg-primary-500 text-white px-6 py-3 rounded-lg hover:bg-primary-600">
+            Sign In
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] p-4">
