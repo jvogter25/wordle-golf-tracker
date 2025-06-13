@@ -78,15 +78,23 @@ export default function TournamentsPage() {
 
   useEffect(() => {
     if (user) {
-      getUserGroups().then(setGroups);
+      getUserGroups().then((groups) => {
+        setGroups(groups);
+        if (groups.length === 1) {
+          setSelectedGroup(groups[0].id);
+        }
+      });
     }
   }, [user]);
 
   useEffect(() => {
+    if (groups.length === 1 && selectedGroup === '') {
+      setSelectedGroup(groups[0].id);
+    }
     if (selectedGroup) {
       fetchTournaments();
     }
-  }, [selectedGroup]);
+  }, [selectedGroup, groups]);
 
   const fetchTournaments = async () => {
     setLoading(true);
