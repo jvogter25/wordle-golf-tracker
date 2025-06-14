@@ -5,37 +5,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 // Create a supabase client for functions that need it
 const supabase = createClientComponentClient()
 
-// Major tournament schedule for 2025 (will need to be updated annually)
-const MAJOR_TOURNAMENTS_2025 = [
-  {
-    name: "The Masters",
-    start_date: "2025-04-10",
-    end_date: "2025-04-13",
-    type: "major",
-    status: "upcoming"
-  },
-  {
-    name: "PGA Championship",
-    start_date: "2025-05-15",
-    end_date: "2025-05-18",
-    type: "major",
-    status: "upcoming"
-  },
-  {
-    name: "U.S. Open",
-    start_date: "2025-06-12",
-    end_date: "2025-06-15",
-    type: "major",
-    status: "upcoming"
-  },
-  {
-    name: "The Open Championship",
-    start_date: "2025-07-17",
-    end_date: "2025-07-20",
-    type: "major",
-    status: "upcoming"
-  }
-]
+// Birthday tournament system - no hardcoded tournaments needed
 
 export async function getUpcomingTournaments(client: SupabaseClient) {
   const { data, error } = await client
@@ -252,21 +222,7 @@ export async function getMajorTournaments(client: SupabaseClient) {
   return data
 }
 
-export async function createMajorTournaments(client: SupabaseClient) {
-  const { data, error } = await client
-    .from('tournaments')
-    .insert(MAJOR_TOURNAMENTS_2025.map(tournament => ({
-      ...tournament,
-      year: 2025,
-      is_active: false,
-      birthday_user_id: null,
-      birthday_advantage: 0
-    })))
-    .select()
-
-  if (error) throw error
-  return data
-}
+// Major tournaments removed - using birthday tournament system only
 
 // Create birthday tournaments for all group members
 export const createBirthdayTournaments = async (client: SupabaseClient, groupId: string, year: number) => {
@@ -311,12 +267,7 @@ export const createBirthdayTournaments = async (client: SupabaseClient, groupId:
       tournamentStart.setDate(tournamentStart.getDate() + (preferences.preferred_week_offset * 7))
     }
 
-    // Check for conflicts with major tournaments
-    const hasConflict = await checkMajorTournamentConflict(client, tournamentStart, year)
-    if (hasConflict) {
-      // Move to week before birthday
-      tournamentStart.setDate(tournamentStart.getDate() - 7)
-    }
+    // No major tournament conflicts to check - birthday tournaments only
 
     const tournamentName = preferences?.custom_tournament_name || 
       `${profile.display_name}'s Birthday Championship`
@@ -470,20 +421,7 @@ function formatDate(date: Date): string {
   return date.toISOString().split('T')[0]
 }
 
-async function checkMajorTournamentConflict(client: SupabaseClient, proposedDate: Date, year: number): Promise<boolean> {
-  const startDate = formatDate(proposedDate)
-  const endDate = addDays(startDate, 6)
-
-  const { data, error } = await client
-    .from('tournaments')
-    .select('id')
-    .eq('tournament_type', 'major')
-    .eq('year', year)
-    .or(`and(start_date.lte.${endDate},end_date.gte.${startDate})`)
-
-  if (error) throw error
-  return (data?.length || 0) > 0
-}
+// Major tournament conflict checking removed - birthday tournaments only
 
 // Tournament day helpers
 export const getTournamentDay = (tournamentStartDate: string, currentDate: string): number | null => {
@@ -521,4 +459,80 @@ export const isCutDay = (tournamentStartDate: string, currentDate: string): bool
   const daysDiff = Math.floor((current.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
   
   return daysDiff === 4 // Friday
+}
+
+// Check for upcoming birthdays and create tournaments automatically
+export async function checkAndCreateBirthdayTournaments(client: SupabaseClient) {
+  const today = new Date()
+  const nextWeek = new Date(today)
+  nextWeek.setDate(today.getDate() + 7)
+  
+  // Get all users with birthdays in the next week
+  const { data: profiles, error: profilesError } = await client
+    .from('profiles')
+    .select('id, display_name, email, birth_month, birth_day')
+    .not('birth_month', 'is', null)
+    .not('birth_day', 'is', null)
+
+  if (profilesError) throw profilesError
+
+  const upcomingBirthdays = profiles.filter(profile => {
+    if (!profile.birth_month || !profile.birth_day) return false
+    
+    // Create birthday date for this year
+    const birthdayThisYear = new Date(today.getFullYear(), profile.birth_month - 1, profile.birth_day)
+    
+    // Check if birthday is within the next week
+    return birthdayThisYear >= today && birthdayThisYear <= nextWeek
+  })
+
+  // Create tournaments for upcoming birthdays
+  for (const profile of upcomingBirthdays) {
+    await createBirthdayTournamentForUser(client, profile)
+  }
+
+  return upcomingBirthdays
+}
+
+async function createBirthdayTournamentForUser(client: SupabaseClient, profile: any) {
+  const today = new Date()
+  const birthdayDate = new Date(today.getFullYear(), profile.birth_month - 1, profile.birth_day)
+  
+  // Check if tournament already exists for this user's birthday this year
+  const { data: existingTournament } = await client
+    .from('tournaments')
+    .select('id')
+    .eq('tournament_type', 'birthday')
+    .eq('birthday_user_id', profile.id)
+    .eq('year', today.getFullYear())
+    .single()
+
+  if (existingTournament) return // Tournament already exists
+
+  // Create the birthday tournament
+  const tournamentName = `${profile.display_name || profile.email.split('@')[0]}'s Birthday Tournament`
+  
+  // Tournament runs for the week of their birthday (Monday to Sunday)
+  const weekStart = getWeekStart(birthdayDate)
+  const weekEnd = new Date(weekStart)
+  weekEnd.setDate(weekStart.getDate() + 6)
+
+  const { data: tournament, error } = await client
+    .from('tournaments')
+    .insert({
+      name: tournamentName,
+      tournament_type: 'birthday',
+      year: today.getFullYear(),
+      start_date: formatDate(weekStart),
+      end_date: formatDate(weekEnd),
+      venue: 'Wordle Golf',
+      is_active: true,
+      birthday_user_id: profile.id,
+      birthday_advantage: 0.5
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  return tournament
 } 

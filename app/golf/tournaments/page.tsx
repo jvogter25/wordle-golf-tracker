@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getUserGroups } from '../../../lib/groups';
+import { checkAndCreateBirthdayTournaments } from '../../../lib/tournaments';
 
 const navLinks = [
   { href: '/golf/homepage', label: 'Home' },
@@ -80,6 +81,8 @@ export default function TournamentsPage() {
   useEffect(() => {
     if (user) {
       getUserGroups(supabase).then(setGroups);
+      // Check for upcoming birthdays and create tournaments
+      checkAndCreateBirthdayTournaments(supabase).catch(console.error);
     }
   }, [user]);
 
@@ -107,12 +110,10 @@ export default function TournamentsPage() {
   // Partition tournaments
   const now = new Date();
   const active = tournaments.filter(t => new Date(t.start_date) <= now && new Date(t.end_date) >= now && t.is_active);
-  const upcomingMajors = tournaments.filter(t => t.tournament_type === 'major' && new Date(t.start_date) > now);
   const upcomingBirthdays = tournaments.filter(t => t.tournament_type === 'birthday' && new Date(t.start_date) > now);
   const past = tournaments.filter(t => new Date(t.end_date) < now);
 
-  // Only show the next upcoming major and birthday (for any group member)
-  const nextMajor = upcomingMajors.length > 0 ? [upcomingMajors[0]] : [];
+  // Show next upcoming birthday tournament
   const nextBirthday = upcomingBirthdays.length > 0 ? [upcomingBirthdays[0]] : [];
 
   if (authLoading || loading) {
@@ -161,16 +162,7 @@ export default function TournamentsPage() {
           </div>
         </nav>
         <WordleHeader label="TOURNAMENTS" />
-        <div className="mt-8 p-4 bg-yellow-100 text-xs rounded">
-          <div><b>DEBUG:</b></div>
-          <div>groups: {JSON.stringify(groups)}</div>
-          <div>selectedGroup: {JSON.stringify(selectedGroup)}</div>
-          <div>tournaments: {JSON.stringify(tournaments)}</div>
-          <div>fetchError: {JSON.stringify(fetchError)}</div>
-          <div>authLoading: {JSON.stringify(authLoading)}</div>
-          <div>user: {JSON.stringify(user)}</div>
-          <div>loading: {JSON.stringify(loading)}</div>
-        </div>
+        
         <div className="mb-8">
           {groups.length > 1 && (
             <div className="mb-6">
@@ -187,7 +179,8 @@ export default function TournamentsPage() {
               </select>
             </div>
           )}
-          {/* Active Section */}
+          
+          {/* Active Tournament Section */}
           {active.length > 0 && (
             <div className="mb-8">
               <h3 className="text-lg font-semibold mb-2">Active Tournament</h3>
@@ -195,58 +188,66 @@ export default function TournamentsPage() {
                 <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block mb-4">
                   <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border-2 border-green-500 hover:shadow-lg transition">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="font-semibold text-lg">{t.name} {t.tournament_type === 'birthday' && <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Birthday</span>}</div>
+                      <div className="font-semibold text-lg">{t.name} 
+                        {t.tournament_type === 'birthday' && <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">🎂 Birthday</span>}
+                      </div>
                       <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
                     </div>
-                    <div className="mb-2 text-sm">Phase: <span className="font-bold">Active</span></div>
+                    <div className="text-sm text-[hsl(var(--muted-foreground))]">{t.venue}</div>
                   </div>
                 </Link>
               ))}
             </div>
           )}
-          {/* Upcoming Section */}
-          {(nextMajor.length > 0 || nextBirthday.length > 0) && (
+
+          {/* Upcoming Birthday Tournaments */}
+          {nextBirthday.length > 0 && (
             <div className="mb-8">
-              <h3 className="text-lg font-semibold mb-2">Upcoming Tournaments</h3>
-              {nextMajor.map(t => (
-                <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block mb-4">
-                  <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border-2 border-blue-400 hover:shadow-lg transition">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="font-semibold text-lg">{t.name}</div>
-                      <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
-                    </div>
-                    <div className="mb-2 text-sm">Phase: <span className="font-bold">Upcoming</span></div>
-                  </div>
-                </Link>
-              ))}
+              <h3 className="text-lg font-semibold mb-2">Upcoming Birthday Tournament</h3>
               {nextBirthday.map(t => (
                 <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block mb-4">
                   <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border-2 border-yellow-400 hover:shadow-lg transition">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="font-semibold text-lg">{t.name} <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Birthday</span></div>
+                      <div className="font-semibold text-lg">{t.name} 
+                        <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">🎂 Birthday</span>
+                      </div>
                       <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
                     </div>
-                    <div className="mb-2 text-sm">Phase: <span className="font-bold">Upcoming</span></div>
+                    <div className="text-sm text-[hsl(var(--muted-foreground))]">{t.venue}</div>
                   </div>
                 </Link>
               ))}
             </div>
           )}
-          {/* Past Section */}
+
+          {/* No Tournaments Message */}
+          {active.length === 0 && nextBirthday.length === 0 && (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">🎂</div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Active Tournaments</h3>
+              <p className="text-gray-600 mb-4">Birthday tournaments are created automatically when someone's birthday is coming up!</p>
+              <p className="text-sm text-gray-500">Make sure to set your birthday in your profile to participate in birthday tournaments.</p>
+            </div>
+          )}
+
+          {/* Past Tournaments */}
           {past.length > 0 && (
-            <div>
+            <div className="mb-8">
               <h3 className="text-lg font-semibold mb-2">Past Tournaments</h3>
-              {past.slice().reverse().map(t => (
-                <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block mb-4">
-                  <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border border-[hsl(var(--border))] hover:shadow-lg transition">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="font-semibold text-lg">{t.name} {t.tournament_type === 'birthday' && <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Birthday</span>}</div>
-                      <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
+              <div className="space-y-2">
+                {past.slice(0, 5).map(t => (
+                  <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block">
+                    <div className="bg-[hsl(var(--card))] rounded-lg shadow p-4 hover:shadow-md transition">
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium">{t.name}
+                          {t.tournament_type === 'birthday' && <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">🎂</span>}
+                        </div>
+                        <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
+                      </div>
                     </div>
-                    <div className="mb-2 text-sm">Phase: <span className="font-bold">Completed</span></div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                ))}
+              </div>
             </div>
           )}
         </div>

@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useAuth as useAuthContext } from '../../../contexts/AuthContext'
 import type { Group, GroupMember, Profile } from '../../../lib/supabase'
+import { useRouter } from 'next/navigation'
+import { leaveGroup as leaveGroupLib } from '../../../lib/groups'
 
 interface GroupWithMembers extends Group {
   members: (GroupMember & { profiles: Profile })[]
@@ -17,6 +19,7 @@ export default function GroupDetailPage({ params }: { params: { id: string } }) 
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const groupId = params.id
+  const router = useRouter()
 
   useEffect(() => {
     if (user && groupId) {
@@ -63,24 +66,11 @@ export default function GroupDetailPage({ params }: { params: { id: string } }) 
   }
 
   const leaveGroup = async () => {
-    if (!confirm('Are you sure you want to leave this group?')) return
-
     try {
-      const { error } = await supabase
-        .from('group_members')
-        .delete()
-        .eq('group_id', groupId)
-        .eq('user_id', user?.id)
-
-      if (error) throw error
-
-      setMessage('Left group successfully')
-      // Redirect after a short delay
-      setTimeout(() => {
-        window.location.href = '/groups'
-      }, 1500)
-    } catch (error: any) {
-      setMessage(`Error leaving group: ${error.message}`)
+      await leaveGroupLib(supabase, params.id)
+      router.push('/groups')
+    } catch (error) {
+      console.error('Error leaving group:', error)
     }
   }
 

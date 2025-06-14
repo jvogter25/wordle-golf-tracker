@@ -8,14 +8,14 @@ BEGIN
   RETURN QUERY
   WITH monthly_scores AS (
     SELECT 
-      u.id,
-      u.display_name,
-      AVG(s.score) as score
-    FROM users u
-    JOIN scores s ON s.user_id = u.id
-    WHERE EXTRACT(YEAR FROM s.date) = year
-    AND EXTRACT(MONTH FROM s.date) = month
-    GROUP BY u.id, u.display_name
+      p.id,
+      p.display_name,
+      AVG(s.raw_score) as score
+    FROM profiles p
+    JOIN scores s ON s.user_id = p.id
+    WHERE EXTRACT(YEAR FROM s.puzzle_date) = year
+    AND EXTRACT(MONTH FROM s.puzzle_date) = month
+    GROUP BY p.id, p.display_name
   )
   SELECT 
     ms.id,

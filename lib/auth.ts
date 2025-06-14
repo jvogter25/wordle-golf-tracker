@@ -41,4 +41,19 @@ export const updateProfile = async (supabase, userId: string, updates: any) => {
   
   if (error) throw error
   return data
+}
+
+export const updateUserBirthday = async (client: SupabaseClient, userId: string, birthMonth: number, birthDay: number) => {
+  const { data, error } = await client
+    .from('profiles')
+    .update({
+      birth_month: birthMonth,
+      birth_day: birthDay
+    })
+    .eq('id', userId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
 } 
