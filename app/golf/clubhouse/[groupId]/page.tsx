@@ -8,7 +8,7 @@ import { getGroupMembers } from '../../../../lib/groups';
 
 export default function ClubhouseGroupPage({ params }) {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, supabase } = useAuth();
   console.log('DEBUG: Current user from useAuth:', user);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,11 +21,11 @@ export default function ClubhouseGroupPage({ params }) {
 
   useEffect(() => {
     if (!authLoading && params?.groupId) {
-      getGroupMembers(params.groupId).then((members) => {
+      getGroupMembers(supabase, params.groupId).then((members) => {
         setMembers(members);
       }).finally(() => setLoading(false));
     }
-  }, [params?.groupId, authLoading]);
+  }, [authLoading, params?.groupId]);
 
   if (authLoading || loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   if (!user) return <div className="min-h-screen flex items-center justify-center">Please sign in</div>;

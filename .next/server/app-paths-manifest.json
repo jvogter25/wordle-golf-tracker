@@ -1,7 +1,7 @@
 {
-  "/golf/homepage/page": "app/golf/homepage/page.js",
-  "/golf/clubhouse/page": "app/golf/clubhouse/page.js",
   "/golf/player/page": "app/golf/player/page.js",
+  "/golf/homepage/page": "app/golf/homepage/page.js",
+  "/golf/clubhouse/[groupId]/page": "app/golf/clubhouse/[groupId]/page.js",
   "/golf/leaderboard/page": "app/golf/leaderboard/page.js",
-  "/golf/clubhouse/[groupId]/page": "app/golf/clubhouse/[groupId]/page.js"
+  "/golf/clubhouse/page": "app/golf/clubhouse/page.js"
 }
