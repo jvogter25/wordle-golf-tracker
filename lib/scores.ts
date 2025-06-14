@@ -1,7 +1,6 @@
-import { supabase } from './supabase'
 import { convertAttemptsToGolf, calculateHandicap, isCurrentDaySubmission } from './golf-scoring'
 
-export const submitScore = async (groupId: string, attempts: number, puzzleDate: string) => {
+export const submitScore = async (supabase, groupId: string, attempts: number, puzzleDate: string) => {
   const user = await supabase.auth.getUser()
   if (!user.data.user) throw new Error('Not authenticated')
   
@@ -42,12 +41,12 @@ export const submitScore = async (groupId: string, attempts: number, puzzleDate:
   if (scoreError) throw scoreError
   
   // Update handicap
-  await updateHandicap(user.data.user.id, groupId)
+  await updateHandicap(supabase, user.data.user.id, groupId)
   
   return newScore
 }
 
-export const updateHandicap = async (userId: string, groupId: string) => {
+export const updateHandicap = async (supabase, userId: string, groupId: string) => {
   // Get recent scores for handicap calculation
   const { data: scores, error: scoresError } = await supabase
     .from('scores')
@@ -79,7 +78,7 @@ export const updateHandicap = async (userId: string, groupId: string) => {
   return handicap
 }
 
-export const getMonthlyLeaderboard = async (groupId: string, year: number, month: number) => {
+export const getMonthlyLeaderboard = async (supabase, groupId: string, year: number, month: number) => {
   const startDate = `${year}-${month.toString().padStart(2, '0')}-01`
   const endDate = new Date(year, month, 0).toISOString().split('T')[0] // Last day of month
   
@@ -147,7 +146,7 @@ export const getMonthlyLeaderboard = async (groupId: string, year: number, month
   return leaderboard
 }
 
-export const getUserMonthlyStats = async (userId: string, groupId: string, year: number, month: number) => {
+export const getUserMonthlyStats = async (supabase, userId: string, groupId: string, year: number, month: number) => {
   const startDate = `${year}-${month.toString().padStart(2, '0')}-01`
   const endDate = new Date(year, month, 0).toISOString().split('T')[0]
   
