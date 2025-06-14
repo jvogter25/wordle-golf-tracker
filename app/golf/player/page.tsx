@@ -396,11 +396,7 @@ export default function DevPlayerCardPage() {
                   </div>
                 )}
               </div>
-              {birthMonth && birthDay && (
-                <div className="text-xs text-green-600 mt-1">
-                  🎂 Birthday tournaments will be created automatically for your birthday week!
-                </div>
-              )}
+
             </div>
             <div className="mb-2">
               <span className="font-semibold">Player Bio:</span>
