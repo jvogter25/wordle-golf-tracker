@@ -83,10 +83,9 @@ export default function DevPlayerCardPage() {
   const [handicap, setHandicap] = useState<string>('');
   const [bio, setBio] = useState('');
   const [groups, setGroups] = useState([]);
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, supabase } = useAuth();
   const [tournamentWins, setTournamentWins] = useState<TournamentWin[]>([]);
   const [monthlyWins, setMonthlyWins] = useState<{ year: number; month: number }[]>([]);
-  const supabase = createClientComponentClient<Database>();
   const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
@@ -105,9 +104,9 @@ export default function DevPlayerCardPage() {
     };
     if (!authLoading && user) {
       fetchProfile();
-      getUserGroups().then(setGroups);
+      getUserGroups(supabase).then(setGroups);
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, supabase]);
 
   useEffect(() => {
     const fetchTournamentWins = async () => {

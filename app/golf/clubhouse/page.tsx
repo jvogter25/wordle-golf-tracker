@@ -62,7 +62,7 @@ function WordleHeader({ label }: { label: string }) {
 }
 
 export default function ClubhousePage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, supabase } = useAuth();
   console.log('DEBUG: Current user from useAuth:', user);
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -74,7 +74,7 @@ export default function ClubhousePage() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      getUserGroups().then(setGroups).finally(() => setLoading(false));
+      getUserGroups(supabase).then(setGroups).finally(() => setLoading(false));
     }
   }, [user, authLoading]);
 
@@ -86,7 +86,7 @@ export default function ClubhousePage() {
       setShowJoinForm(false);
       setJoinCode('');
       setLoading(true);
-      getUserGroups().then(setGroups).finally(() => setLoading(false));
+      getUserGroups(supabase).then(setGroups).finally(() => setLoading(false));
     } catch (err) {
       setMessage(err.message || 'Error joining group');
     }
@@ -99,7 +99,7 @@ export default function ClubhousePage() {
       setShowCreateForm(false);
       setNewGroupName('');
       setLoading(true);
-      getUserGroups().then(setGroups).finally(() => setLoading(false));
+      getUserGroups(supabase).then(setGroups).finally(() => setLoading(false));
     } catch (err) {
       setMessage(err.message || 'Error creating group');
     }
