@@ -137,8 +137,8 @@ export default function TournamentLeaderboardPage() {
                 return (
                   <div key={player.id} className="bg-[hsl(var(--muted))] rounded-xl p-4 shadow-sm">
                     {/* Mobile Layout */}
-                    <div className="md:hidden">
-                      <div className="flex items-center justify-between mb-3">
+                    <div className="md:hidden space-y-2">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           <div className="w-10 h-10 bg-[#6aaa64] rounded-full flex items-center justify-center text-white font-bold text-lg">
                             {pos}
@@ -153,11 +153,17 @@ export default function TournamentLeaderboardPage() {
                           {player.score}
                         </div>
                       </div>
-                      <div className={`text-xl font-bold mb-1 ${nameClass}`}>
+                      <div className={`text-xl font-bold ${nameClass}`}>
                         {player.display_name}
                       </div>
-                      <div className="text-sm text-[hsl(var(--muted-foreground))] flex items-center">
-                        🎂 {tournamentName}
+                      <div className="text-lg text-[#6aaa64] font-semibold">
+                        🎂 Birthday
+                      </div>
+                      <div className="text-lg font-semibold text-[hsl(var(--foreground))]">
+                        {tournamentName}
+                      </div>
+                      <div className="text-lg font-semibold text-[hsl(var(--foreground))]">
+                        Leaderboard
                       </div>
                     </div>
                     
