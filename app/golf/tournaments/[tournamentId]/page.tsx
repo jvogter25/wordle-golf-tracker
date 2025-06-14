@@ -127,12 +127,7 @@ export default function TournamentLeaderboardPage() {
         </div>
         <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-4 md:p-6 mb-6 border border-[hsl(var(--border))]">
           <h2 className="text-2xl font-bold text-[hsl(var(--foreground))] mb-4">{tournamentName}</h2>
-          <div className="divide-y divide-[hsl(var(--border))]">
-            <div className="flex items-center py-2 px-2 font-bold text-[hsl(var(--muted-foreground))] text-xs md:text-sm">
-              <div className="w-10 text-left">Pos</div>
-              <div className="flex-1 text-left pl-2">Name</div>
-              <div className="w-16 text-right">Score</div>
-            </div>
+          <div className="space-y-3">
             {loading ? (
               <div className="text-center py-8">Loading...</div>
             ) : (
@@ -140,13 +135,45 @@ export default function TournamentLeaderboardPage() {
                 let pos: string = String(idx + 1);
                 const nameClass = idx < 3 ? 'text-[#6aaa64] font-semibold' : 'text-[hsl(var(--foreground))]';
                 return (
-                  <div key={player.id} className="flex items-center py-4 px-2 bg-[hsl(var(--muted))] rounded-xl my-2 shadow-sm">
-                    <div className="w-10 text-left font-bold text-base md:text-lg">{pos}</div>
-                    <div className="flex-1 flex items-center pl-2">
-                      <img src={player.avatar_url || '/golf/jake-avatar.jpg'} alt={player.display_name} className="w-8 h-8 rounded-full border-2 border-[hsl(var(--primary))] mr-2" />
-                      <span className={`truncate text-base md:text-lg ${nameClass}`}>{player.display_name}</span>
+                  <div key={player.id} className="bg-[hsl(var(--muted))] rounded-xl p-4 shadow-sm">
+                    {/* Mobile Layout */}
+                    <div className="md:hidden">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-[#6aaa64] rounded-full flex items-center justify-center text-white font-bold text-sm">
+                            {pos}
+                          </div>
+                          <img 
+                            src={player.avatar_url || '/golf/jake-avatar.jpg'} 
+                            alt={player.display_name} 
+                            className="w-10 h-10 rounded-full border-2 border-[hsl(var(--primary))]" 
+                          />
+                        </div>
+                        <div className="text-2xl font-bold text-[#6aaa64]">
+                          {player.score}
+                        </div>
+                      </div>
+                      <div className={`text-lg font-semibold ${nameClass}`}>
+                        {player.display_name}
+                      </div>
+                      <div className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
+                        {tournamentName}
+                      </div>
                     </div>
-                    <div className="w-16 text-right text-xl">{player.score}</div>
+                    
+                    {/* Desktop Layout */}
+                    <div className="hidden md:flex md:items-center">
+                      <div className="w-12 text-left font-bold text-lg">{pos}</div>
+                      <div className="flex-1 flex items-center pl-4">
+                        <img 
+                          src={player.avatar_url || '/golf/jake-avatar.jpg'} 
+                          alt={player.display_name} 
+                          className="w-10 h-10 rounded-full border-2 border-[hsl(var(--primary))] mr-3" 
+                        />
+                        <span className={`text-lg ${nameClass}`}>{player.display_name}</span>
+                      </div>
+                      <div className="w-20 text-right text-xl font-bold">{player.score}</div>
+                    </div>
                   </div>
                 );
               })
