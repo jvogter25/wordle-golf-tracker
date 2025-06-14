@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '../../../lib/supabase'
+import { useAuth } from '../../../contexts/AuthContext'
 
 export default function SetupPasswordPage() {
   const router = useRouter()
@@ -10,6 +10,7 @@ export default function SetupPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const { supabase } = useAuth()
 
   useEffect(() => {
     const checkSession = async () => {

@@ -3,11 +3,12 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../lib/supabase'
+import { useAuth as useAuthContext } from '../../contexts/AuthContext'
 import type { Group } from '../../lib/supabase'
 
 export default function SubmitPage() {
   const { user, loading: authLoading } = useAuth()
+  const { supabase } = useAuthContext()
   const [groups, setGroups] = useState<Group[]>([])
   const [selectedGroup, setSelectedGroup] = useState('')
   const [attempts, setAttempts] = useState('')

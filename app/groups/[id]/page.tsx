@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '../../../contexts/AuthContext'
-import { supabase } from '../../../lib/supabase'
+import { useAuth as useAuthContext } from '../../../contexts/AuthContext'
 import type { Group, GroupMember, Profile } from '../../../lib/supabase'
 
 interface GroupWithMembers extends Group {
@@ -12,6 +12,7 @@ interface GroupWithMembers extends Group {
 
 export default function GroupDetailPage({ params }: { params: { id: string } }) {
   const { user, loading: authLoading } = useAuth()
+  const { supabase } = useAuthContext()
   const [group, setGroup] = useState<GroupWithMembers | null>(null)
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')

@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../lib/supabase'
 
 function WordleHeader({ label }: { label: string }) {
   const colors = ['bg-[#6aaa64]', 'bg-[#c9b458]', 'bg-[#787c7e]'];
@@ -31,6 +30,7 @@ export default function ProfilePage() {
   const [displayName, setDisplayName] = useState('')
   const [message, setMessage] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { supabase } = useAuth()
 
   useEffect(() => {
     console.log('🔄 Profile page: Auth state changed', { user: user?.email, authLoading })

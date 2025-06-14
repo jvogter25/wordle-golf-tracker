@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { supabase } from '../../../lib/supabase'
+import { useAuth } from '../../../contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const router = useRouter()
+  const { supabase } = useAuth()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()

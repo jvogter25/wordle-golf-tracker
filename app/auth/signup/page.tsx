@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { supabase } from '../../../lib/supabase'
+import { useAuth } from '../../../contexts/AuthContext'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
@@ -11,6 +11,8 @@ export default function SignupPage() {
   const [birthday, setBirthday] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+
+  const { supabase } = useAuth()
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()

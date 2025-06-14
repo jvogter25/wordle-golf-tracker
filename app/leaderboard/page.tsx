@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../lib/supabase'
 
 export default function LeaderboardPage() {
   const { user, loading: authLoading } = useAuth()
@@ -13,6 +12,7 @@ export default function LeaderboardPage() {
   const [selectedGroup, setSelectedGroup] = useState('')
   const [viewType, setViewType] = useState<'net' | 'raw'>('net')
   const [message, setMessage] = useState('')
+  const { supabase } = useAuth()
 
   useEffect(() => {
     if (user) {

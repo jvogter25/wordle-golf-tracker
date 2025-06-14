@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
-import { supabase } from '../../../lib/supabase';
 import { getUserGroups } from '../../../lib/groups';
 
 const navLinks = [
@@ -71,6 +70,7 @@ function formatDateRange(start, end) {
 
 export default function TournamentsPage() {
   const { user, loading: authLoading } = useAuth();
+  const { supabase } = useAuth();
   const [groups, setGroups] = useState<any[]>([]);
   const [selectedGroup, setSelectedGroup] = useState('');
   const [tournaments, setTournaments] = useState<any[]>([]);
@@ -79,12 +79,7 @@ export default function TournamentsPage() {
 
   useEffect(() => {
     if (user) {
-      getUserGroups().then((groups) => {
-        setGroups(groups);
-        if (groups.length === 1) {
-          setSelectedGroup(groups[0].id);
-        }
-      });
+      getUserGroups(supabase).then(setGroups);
     }
   }, [user]);
 

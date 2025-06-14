@@ -3,11 +3,12 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../lib/supabase'
+import { useAuth as useAuthContext } from '../../contexts/AuthContext'
 import type { Group, GroupMember, Profile } from '../../lib/supabase'
 
 export default function GroupsPage() {
   const { user, loading: authLoading } = useAuth()
+  const { supabase } = useAuthContext()
   const [groups, setGroups] = useState<(Group & { member_count: number })[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateForm, setShowCreateForm] = useState(false)
