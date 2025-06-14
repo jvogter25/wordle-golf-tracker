@@ -1,5 +1,9 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { Tournament, TournamentParticipant, BirthdayTournamentPreferences } from './supabase'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+
+// Create a supabase client for functions that need it
+const supabase = createClientComponentClient()
 
 // Major tournament schedule for 2025 (will need to be updated annually)
 const MAJOR_TOURNAMENTS_2025 = [
@@ -192,9 +196,9 @@ export async function createBirthdayTournament(
   const { error } = await client
     .from('tournaments')
     .insert({
-      name: `${preferences.display_name}'s Birthday Tournament`,
-      start_date: preferences.start_date,
-      end_date: preferences.end_date,
+      name: `${preferences.custom_tournament_name || 'Birthday Tournament'}`,
+      start_date: new Date().toISOString().split('T')[0],
+      end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       type: 'birthday',
       created_by: userId,
       status: 'upcoming'
@@ -212,9 +216,9 @@ export async function getTournamentLeaderboard(client: SupabaseClient, tournamen
   return data
 }
 
-export async function generateBirthdayTournaments(supabase: SupabaseClient) {
+export async function generateBirthdayTournaments(client: SupabaseClient) {
   // Get all users with birthday preferences
-  const { data: preferences, error: prefsError } = await supabase
+  const { data: preferences, error: prefsError } = await client
     .from('birthday_tournament_preferences')
     .select('*')
 
@@ -224,13 +228,9 @@ export async function generateBirthdayTournaments(supabase: SupabaseClient) {
   const results = []
 
   for (const pref of preferences) {
-    const birthday = new Date(pref.birthday)
-    const isBirthdayMonth = birthday.getMonth() === today.getMonth()
-    const isBirthdayDay = birthday.getDate() === today.getDate()
-
-    if (isBirthdayMonth && isBirthdayDay) {
+    if (pref.enable_birthday_tournaments) {
       try {
-        const tournament = await createBirthdayTournament(supabase, pref.user_id, pref)
+        const tournament = await createBirthdayTournament(client, pref.user_id, pref)
         results.push({ success: true, tournament })
       } catch (error) {
         results.push({ success: false, error, userId: pref.user_id })
@@ -241,8 +241,8 @@ export async function generateBirthdayTournaments(supabase: SupabaseClient) {
   return results
 }
 
-export async function getMajorTournaments(supabase: SupabaseClient) {
-  const { data, error } = await supabase
+export async function getMajorTournaments(client: SupabaseClient) {
+  const { data, error } = await client
     .from('tournaments')
     .select('*')
     .eq('is_major', true)
@@ -252,31 +252,26 @@ export async function getMajorTournaments(supabase: SupabaseClient) {
   return data
 }
 
-export async function createMajorTournaments(supabase: SupabaseClient) {
-  const results = []
+export async function createMajorTournaments(client: SupabaseClient) {
+  const { data, error } = await client
+    .from('tournaments')
+    .insert(MAJOR_TOURNAMENTS_2025.map(tournament => ({
+      ...tournament,
+      year: 2025,
+      is_active: false,
+      birthday_user_id: null,
+      birthday_advantage: 0
+    })))
+    .select()
 
-  for (const tournament of MAJOR_TOURNAMENTS_2025) {
-    try {
-      const { data, error } = await supabase
-        .from('tournaments')
-        .insert([tournament])
-        .select()
-        .single()
-
-      if (error) throw error
-      results.push({ success: true, tournament: data })
-    } catch (error) {
-      results.push({ success: false, error, tournament })
-    }
-  }
-
-  return results
+  if (error) throw error
+  return data
 }
 
 // Create birthday tournaments for all group members
-export const createBirthdayTournaments = async (groupId: string, year: number) => {
+export const createBirthdayTournaments = async (client: SupabaseClient, groupId: string, year: number) => {
   // Get all group members with birthdays
-  const { data: members, error: membersError } = await supabase
+  const { data: members, error: membersError } = await client
     .from('group_members')
     .select(`
       user_id,
@@ -298,7 +293,7 @@ export const createBirthdayTournaments = async (groupId: string, year: number) =
     if (!profile.birth_month || !profile.birth_day) continue
 
     // Get user preferences for this group
-    const { data: preferences } = await supabase
+    const { data: preferences } = await client
       .from('birthday_tournament_preferences')
       .select('*')
       .eq('user_id', profile.id)
@@ -317,7 +312,7 @@ export const createBirthdayTournaments = async (groupId: string, year: number) =
     }
 
     // Check for conflicts with major tournaments
-    const hasConflict = await checkMajorTournamentConflict(tournamentStart, year)
+    const hasConflict = await checkMajorTournamentConflict(client, tournamentStart, year)
     if (hasConflict) {
       // Move to week before birthday
       tournamentStart.setDate(tournamentStart.getDate() - 7)
@@ -343,7 +338,7 @@ export const createBirthdayTournaments = async (groupId: string, year: number) =
 
   if (birthdayTournaments.length === 0) return []
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from('tournaments')
     .insert(birthdayTournaments)
     .select()
@@ -353,8 +348,8 @@ export const createBirthdayTournaments = async (groupId: string, year: number) =
 }
 
 // Get active tournament for a specific date
-export const getActiveTournament = async (date: string) => {
-  const { data, error } = await supabase
+export const getActiveTournament = async (client: SupabaseClient, date: string) => {
+  const { data, error } = await client
     .from('tournaments')
     .select('*')
     .lte('start_date', date)
@@ -366,58 +361,12 @@ export const getActiveTournament = async (date: string) => {
   return data
 }
 
-// Get tournament leaderboard
-export const getTournamentLeaderboard = async (tournamentId: string, groupId: string) => {
-  const { data, error } = await supabase
-    .from('tournament_participants')
-    .select(`
-      *,
-      profiles (
-        id,
-        display_name,
-        avatar_url
-      ),
-      tournaments (
-        id,
-        name,
-        tournament_type,
-        birthday_user_id,
-        birthday_advantage
-      )
-    `)
-    .eq('tournament_id', tournamentId)
-    .eq('group_id', groupId)
-    .order('qualifying_total', { ascending: true })
-
-  if (error) throw error
-
-  // Get tournament scores for each participant
-  const participantsWithScores = await Promise.all(
-    data.map(async (participant) => {
-      const { data: scores } = await supabase
-        .from('tournament_scores')
-        .select('*')
-        .eq('tournament_id', tournamentId)
-        .in('score_id', [
-          // Get score IDs for this user/group
-        ])
-
-      return {
-        ...participant,
-        daily_scores: scores || []
-      }
-    })
-  )
-
-  return participantsWithScores
-}
-
 // Activate tournaments based on current date
-export const activateTournaments = async () => {
+export const activateTournaments = async (client: SupabaseClient) => {
   const today = new Date().toISOString().split('T')[0]
   
   // Activate tournaments that should be active today
-  const { error: activateError } = await supabase
+  const { error: activateError } = await client
     .from('tournaments')
     .update({ is_active: true })
     .lte('start_date', today)
@@ -427,7 +376,7 @@ export const activateTournaments = async () => {
   if (activateError) throw activateError
 
   // Deactivate tournaments that have ended
-  const { error: deactivateError } = await supabase
+  const { error: deactivateError } = await client
     .from('tournaments')
     .update({ is_active: false })
     .lt('end_date', today)
@@ -436,24 +385,9 @@ export const activateTournaments = async () => {
   if (deactivateError) throw deactivateError
 }
 
-// Get upcoming tournaments
-export const getUpcomingTournaments = async (groupId: string, limit: number = 5) => {
-  const today = new Date().toISOString().split('T')[0]
-  
-  const { data, error } = await supabase
-    .from('tournaments')
-    .select('*')
-    .gt('start_date', today)
-    .order('start_date', { ascending: true })
-    .limit(limit)
-
-  if (error) throw error
-  return data
-}
-
 // Get tournament history for a group
-export const getTournamentHistory = async (groupId: string, year?: number) => {
-  let query = supabase
+export const getTournamentHistory = async (client: SupabaseClient, groupId: string, year?: number) => {
+  let query = client
     .from('tournament_participants')
     .select(`
       *,
@@ -487,11 +421,12 @@ export const getTournamentHistory = async (groupId: string, year?: number) => {
 
 // Manage birthday tournament preferences
 export const updateBirthdayPreferences = async (
+  client: SupabaseClient,
   userId: string, 
   groupId: string, 
   preferences: Partial<BirthdayTournamentPreferences>
 ) => {
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from('birthday_tournament_preferences')
     .upsert({
       user_id: userId,
@@ -505,8 +440,8 @@ export const updateBirthdayPreferences = async (
   return data
 }
 
-export const getBirthdayPreferences = async (userId: string, groupId: string) => {
-  const { data, error } = await supabase
+export const getBirthdayPreferences = async (client: SupabaseClient, userId: string, groupId: string) => {
+  const { data, error } = await client
     .from('birthday_tournament_preferences')
     .select('*')
     .eq('user_id', userId)
@@ -535,11 +470,11 @@ function formatDate(date: Date): string {
   return date.toISOString().split('T')[0]
 }
 
-async function checkMajorTournamentConflict(proposedDate: Date, year: number): Promise<boolean> {
+async function checkMajorTournamentConflict(client: SupabaseClient, proposedDate: Date, year: number): Promise<boolean> {
   const startDate = formatDate(proposedDate)
   const endDate = addDays(startDate, 6)
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from('tournaments')
     .select('id')
     .eq('tournament_type', 'major')
