@@ -17,6 +17,7 @@ export default function GroupsPage() {
   const [newGroupDescription, setNewGroupDescription] = useState('')
   const [joinCode, setJoinCode] = useState('')
   const [message, setMessage] = useState('')
+  const [copiedCode, setCopiedCode] = useState('')
 
   useEffect(() => {
     console.log('🔄 Groups page: Auth state changed', { user: user?.email, authLoading })
@@ -320,7 +321,23 @@ export default function GroupsPage() {
                 )}
                 <div className="flex justify-between items-center text-sm text-gray-500 mb-4">
                   <span>{group.member_count} members</span>
-                  <span>Code: {group.invite_code}</span>
+                  <div className="flex items-center space-x-2">
+                    <span>Code:</span>
+                    <code className="bg-gray-100 px-2 py-1 rounded font-mono text-gray-800">
+                      {group.invite_code}
+                    </code>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(group.invite_code)
+                        setMessage('Invite code copied!')
+                        setTimeout(() => setMessage(''), 2000)
+                      }}
+                      className="text-blue-500 hover:text-blue-700 text-xs"
+                      title="Copy invite code"
+                    >
+                      📋
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Link

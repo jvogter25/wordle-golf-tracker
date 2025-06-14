@@ -87,6 +87,9 @@ export default function DevPlayerCardPage() {
   const [tournamentWins, setTournamentWins] = useState<TournamentWin[]>([]);
   const [monthlyWins, setMonthlyWins] = useState<{ year: number; month: number }[]>([]);
   const [profile, setProfile] = useState<any>(null);
+  const [birthMonth, setBirthMonth] = useState<number | null>(null);
+  const [birthDay, setBirthDay] = useState<number | null>(null);
+  const [editingBirthday, setEditingBirthday] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -99,6 +102,9 @@ export default function DevPlayerCardPage() {
       if (!error && data) {
         setProfile(data);
         setDisplayName(data.display_name || '');
+        setBio(data.bio || '');
+        setBirthMonth(data.birth_month);
+        setBirthDay(data.birth_day);
         if (data.avatar_url) setProfilePic(data.avatar_url);
       }
     };
@@ -202,6 +208,49 @@ export default function DevPlayerCardPage() {
     }
   };
 
+  const handleUpdateBirthday = async () => {
+    if (!user || !birthMonth || !birthDay) return;
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update({ 
+        birth_month: birthMonth,
+        birth_day: birthDay
+      })
+      .eq('id', user.id);
+    
+    if (!error) {
+      setEditingBirthday(false);
+      // Trigger birthday tournament check
+      const { checkAndCreateBirthdayTournaments } = await import('../../../lib/tournaments');
+      checkAndCreateBirthdayTournaments(supabase).catch(console.error);
+    }
+  };
+
+  const formatBirthday = () => {
+    if (!birthMonth || !birthDay) return 'Not set';
+    const date = new Date(2000, birthMonth - 1, birthDay);
+    return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+  };
+
+  const getDaysInMonth = (month: number) => {
+    return new Date(2000, month, 0).getDate();
+  };
+
+  const handleUpdateBio = async () => {
+    if (!user) return;
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update({ bio: bio.trim() })
+      .eq('id', user.id);
+    
+    if (!error) {
+      // Optionally show a success message
+      console.log('Bio updated successfully');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] p-4">
       <div className="max-w-2xl mx-auto">
@@ -292,10 +341,78 @@ export default function DevPlayerCardPage() {
           <div className="text-left">
             <div className="flex flex-col gap-2 mt-4">
               <div><span className="font-semibold">Joined:</span> {user?.created_at ? formatJoinDate(user.created_at) : ''}</div>
+              
+              {/* Birthday Section */}
+              <div className="flex items-center gap-2">
+                <span className="font-semibold">Birthday:</span>
+                {editingBirthday ? (
+                  <div className="flex items-center gap-2">
+                    <select 
+                      value={birthMonth || ''} 
+                      onChange={e => setBirthMonth(Number(e.target.value))}
+                      className="border rounded px-2 py-1 text-sm"
+                    >
+                      <option value="">Month</option>
+                      {Array.from({length: 12}, (_, i) => (
+                        <option key={i+1} value={i+1}>
+                          {new Date(2000, i, 1).toLocaleDateString('en-US', { month: 'long' })}
+                        </option>
+                      ))}
+                    </select>
+                    <select 
+                      value={birthDay || ''} 
+                      onChange={e => setBirthDay(Number(e.target.value))}
+                      className="border rounded px-2 py-1 text-sm"
+                      disabled={!birthMonth}
+                    >
+                      <option value="">Day</option>
+                      {birthMonth && Array.from({length: getDaysInMonth(birthMonth)}, (_, i) => (
+                        <option key={i+1} value={i+1}>{i+1}</option>
+                      ))}
+                    </select>
+                    <button 
+                      onClick={handleUpdateBirthday}
+                      className="bg-green-500 text-white px-2 py-1 rounded text-sm hover:bg-green-600"
+                      disabled={!birthMonth || !birthDay}
+                    >
+                      Save
+                    </button>
+                    <button 
+                      onClick={() => setEditingBirthday(false)}
+                      className="bg-gray-500 text-white px-2 py-1 rounded text-sm hover:bg-gray-600"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[hsl(var(--muted-foreground))]">{formatBirthday()}</span>
+                    <button 
+                      onClick={() => setEditingBirthday(true)}
+                      className="text-blue-500 hover:text-blue-700 text-sm"
+                    >
+                      {birthMonth && birthDay ? 'Edit' : 'Set Birthday'}
+                    </button>
+                  </div>
+                )}
+              </div>
+              {birthMonth && birthDay && (
+                <div className="text-xs text-green-600 mt-1">
+                  🎂 Birthday tournaments will be created automatically for your birthday week!
+                </div>
+              )}
             </div>
             <div className="mb-2">
               <span className="font-semibold">Player Bio:</span>
-              <textarea className="w-full mt-1 p-2 border border-[hsl(var(--border))] rounded-md bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] resize-none" rows={3} placeholder="Write something about yourself..." value={bio} onChange={e => setBio(e.target.value)} />
+              <textarea 
+                className="w-full mt-1 p-2 border border-[hsl(var(--border))] rounded-md bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] resize-none" 
+                rows={3} 
+                placeholder="Write something about yourself..." 
+                value={bio} 
+                onChange={e => setBio(e.target.value)}
+                onBlur={handleUpdateBio}
+              />
+              <div className="text-xs text-gray-500 mt-1">Bio saves automatically when you click outside the text area</div>
             </div>
           </div>
         </div>

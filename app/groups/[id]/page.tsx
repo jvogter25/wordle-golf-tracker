@@ -82,6 +82,74 @@ export default function GroupDetailPage({ params }: { params: { id: string } }) 
     }
   }
 
+  const generateNewInviteCode = async () => {
+    if (!isAdmin) return
+    
+    try {
+      // Generate a new 6-character code
+      const newCode = Math.random().toString(36).substring(2, 8).toUpperCase()
+      
+      const { error } = await supabase
+        .from('groups')
+        .update({ invite_code: newCode })
+        .eq('id', groupId)
+      
+      if (error) throw error
+      
+      // Refresh group data
+      await fetchGroupDetails()
+      setMessage('New invite code generated!')
+      setTimeout(() => setMessage(''), 3000)
+    } catch (error: any) {
+      setMessage(`Error generating new code: ${error.message}`)
+    }
+  }
+
+  const shareInvite = () => {
+    if (group?.invite_code) {
+      const shareText = `Join our Wordle Golf group "${group.name}"! Use invite code: ${group.invite_code}`
+      
+      if (navigator.share) {
+        navigator.share({
+          title: `Join ${group.name}`,
+          text: shareText,
+        })
+      } else {
+        navigator.clipboard.writeText(shareText)
+        setMessage('Invite message copied to clipboard!')
+        setTimeout(() => setMessage(''), 3000)
+      }
+    }
+  }
+
+  const deleteGroup = async () => {
+    if (!isAdmin || !group) return
+    
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete "${group.name}"? This will permanently delete the group and all its data. This action cannot be undone.`
+    )
+    
+    if (!confirmDelete) return
+    
+    try {
+      // Delete the group (cascade will handle related data)
+      const { error } = await supabase
+        .from('groups')
+        .delete()
+        .eq('id', groupId)
+      
+      if (error) throw error
+      
+      setMessage('Group deleted successfully!')
+      // Redirect to groups page after a short delay
+      setTimeout(() => {
+        router.push('/groups')
+      }, 1500)
+    } catch (error: any) {
+      setMessage(`Error deleting group: ${error.message}`)
+    }
+  }
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -163,19 +231,34 @@ export default function GroupDetailPage({ params }: { params: { id: string } }) 
         {/* Invite Code Section */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Invite Code</h2>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3 mb-3">
             <code className="bg-gray-100 px-4 py-2 rounded text-lg font-mono">
               {group.invite_code}
             </code>
             <button
               onClick={copyInviteCode}
-              className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+              className="bg-blue-500 text-white px-3 py-2 rounded hover:bg-blue-600 text-sm"
             >
-              Copy
+              Copy Code
             </button>
+            <button
+              onClick={shareInvite}
+              className="bg-green-500 text-white px-3 py-2 rounded hover:bg-green-600 text-sm"
+            >
+              Share Invite
+            </button>
+            {isAdmin && (
+              <button
+                onClick={generateNewInviteCode}
+                className="bg-orange-500 text-white px-3 py-2 rounded hover:bg-orange-600 text-sm"
+              >
+                New Code
+              </button>
+            )}
           </div>
           <p className="text-gray-600 text-sm mt-2">
             Share this code with others to invite them to the group.
+            {isAdmin && " As an admin, you can generate a new code if needed."}
           </p>
         </div>
 
@@ -222,6 +305,22 @@ export default function GroupDetailPage({ params }: { params: { id: string } }) 
             ))}
           </div>
         </div>
+
+        {/* Admin Actions Section */}
+        {isAdmin && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <h3 className="text-lg font-semibold text-red-800 mb-2">⚠️ Admin Actions</h3>
+            <p className="text-red-700 text-sm mb-3">
+              As the group admin, you can permanently delete this group. This will remove all group data, scores, and member history.
+            </p>
+            <button
+              onClick={deleteGroup}
+              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 font-semibold"
+            >
+              🗑️ Delete Group Permanently
+            </button>
+          </div>
+        )}
 
         {/* Actions Section */}
         <div className="flex justify-between items-center">

@@ -99,10 +99,20 @@ export default function TournamentsPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from('tournaments')
-      .select('*')
+      .select(`
+        *,
+        tournament_participants(count)
+      `)
       .eq('year', new Date().getFullYear())
       .order('start_date', { ascending: true });
-    setTournaments(data || []);
+    
+    // Add participant count to each tournament
+    const tournamentsWithCounts = (data || []).map(t => ({
+      ...t,
+      participant_count: t.tournament_participants?.[0]?.count || 0
+    }));
+    
+    setTournaments(tournamentsWithCounts);
     setFetchError(error);
     setLoading(false);
   };
@@ -230,12 +240,12 @@ export default function TournamentsPage() {
             </div>
           )}
 
-          {/* Past Tournaments */}
-          {past.length > 0 && (
+          {/* Past Tournaments - Only show tournaments that actually had participants */}
+          {past.filter(t => t.participant_count > 0).length > 0 && (
             <div className="mb-8">
               <h3 className="text-lg font-semibold mb-2">Past Tournaments</h3>
               <div className="space-y-2">
-                {past.slice(0, 5).map(t => (
+                {past.filter(t => t.participant_count > 0).slice(0, 5).map(t => (
                   <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block">
                     <div className="bg-[hsl(var(--card))] rounded-lg shadow p-4 hover:shadow-md transition">
                       <div className="flex items-center justify-between">
