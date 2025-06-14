@@ -75,6 +75,7 @@ export default function TournamentsPage() {
   const [selectedGroup, setSelectedGroup] = useState('');
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
 
   useEffect(() => {
     if (user) {
@@ -104,6 +105,7 @@ export default function TournamentsPage() {
       .eq('year', new Date().getFullYear())
       .order('start_date', { ascending: true });
     setTournaments(data || []);
+    setFetchError(error);
     setLoading(false);
   };
 
@@ -164,6 +166,16 @@ export default function TournamentsPage() {
           </div>
         </nav>
         <WordleHeader label="TOURNAMENTS" />
+        <div className="mt-8 p-4 bg-yellow-100 text-xs rounded">
+          <div><b>DEBUG:</b></div>
+          <div>groups: {JSON.stringify(groups)}</div>
+          <div>selectedGroup: {JSON.stringify(selectedGroup)}</div>
+          <div>tournaments: {JSON.stringify(tournaments)}</div>
+          <div>fetchError: {JSON.stringify(fetchError)}</div>
+          <div>authLoading: {JSON.stringify(authLoading)}</div>
+          <div>user: {JSON.stringify(user)}</div>
+          <div>loading: {JSON.stringify(loading)}</div>
+        </div>
         <div className="mb-8">
           {groups.length > 1 && (
             <div className="mb-6">

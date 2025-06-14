@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Database } from '@/types/supabase';
+import { useAuth } from '../../../contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
 function WordleHeader({ label }: { label: string }) {
@@ -78,7 +77,7 @@ export default function DevSubmitScorePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const router = useRouter();
-  const supabase = createClientComponentClient<Database>();
+  const { user, supabase } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,12 +87,13 @@ export default function DevSubmitScorePage() {
     setError(null);
     setSuccess(false);
 
-    try {
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
-      if (!user) throw new Error('Not logged in');
+    if (!user) {
+      setError('Not logged in');
+      setSubmitting(false);
+      return;
+    }
 
+    try {
       // Get current date in YYYY-MM-DD format
       const today = new Date().toISOString().split('T')[0];
 
@@ -112,7 +112,6 @@ export default function DevSubmitScorePage() {
 
       setSuccess(true);
       setAttempts('');
-      
       // Redirect to leaderboard after 2 seconds
       setTimeout(() => {
         router.push('/golf/leaderboard');

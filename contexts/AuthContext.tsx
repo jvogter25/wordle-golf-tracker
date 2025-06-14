@@ -10,6 +10,7 @@ interface AuthContextType {
   session: Session | null
   loading: boolean
   signOut: () => Promise<void>
+  supabase: ReturnType<typeof createClientComponentClient<Database>>
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -17,6 +18,7 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   loading: true,
   signOut: async () => {},
+  supabase: null as any,
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -91,6 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     loading,
     signOut,
+    supabase,
   }
 
   return (

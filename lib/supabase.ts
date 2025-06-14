@@ -1,48 +1,9 @@
-import { createClient } from '@supabase/supabase-js'
-
 // Environment variables for Next.js web deployment
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://xneavnttdgrpltmmldit.supabase.co'
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuZWF2bnR0ZGdycGx0bW1sZGl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2NTk3ODksImV4cCI6MjA2NTIzNTc4OX0.2T3VMVWWn7g-m8iYcoHq8r5ZkM8rWtLEZ2RXWttw3AA'
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables')
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  }
-})
-
-// Session management utilities
-export const refreshSession = async () => {
-  try {
-    const { data, error } = await supabase.auth.refreshSession()
-    if (error) {
-      console.log('Session refresh error:', error.message)
-      return false
-    }
-    return true
-  } catch (error) {
-    console.log('Session refresh failed:', error)
-    return false
-  }
-}
-
-export const getSessionStatus = async () => {
-  try {
-    const { data: { session } } = await supabase.auth.getSession()
-    return {
-      isValid: !!session,
-      expiresAt: session?.expires_at,
-      refreshToken: session?.refresh_token,
-      timeUntilExpiry: session?.expires_at ? (session.expires_at * 1000) - Date.now() : 0
-    }
-  } catch (error) {
-    return { isValid: false, expiresAt: null, refreshToken: null, timeUntilExpiry: 0 }
-  }
 }
 
 // Database types
