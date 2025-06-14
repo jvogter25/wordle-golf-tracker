@@ -256,3 +256,5 @@ npm run dev
 ## Deployment
 
 Push to GitHub and deploy via Vercel dashboard with environment variables configured. # Trigger deployment
+
+<!-- Deployment trigger: Admin features and tournament cleanup -->
