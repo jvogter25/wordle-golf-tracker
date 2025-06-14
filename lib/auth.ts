@@ -1,6 +1,4 @@
-import { supabase } from './supabase'
-
-export const signInWithEmail = async (email: string) => {
+export const signInWithEmail = async (supabase, email: string) => {
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
@@ -12,17 +10,17 @@ export const signInWithEmail = async (email: string) => {
   return { success: true }
 }
 
-export const signOut = async () => {
+export const signOut = async (supabase) => {
   const { error } = await supabase.auth.signOut()
   if (error) throw error
 }
 
-export const getCurrentUser = async () => {
+export const getCurrentUser = async (supabase) => {
   const { data: { user } } = await supabase.auth.getUser()
   return user
 }
 
-export const getProfile = async (userId: string) => {
+export const getProfile = async (supabase, userId: string) => {
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -33,7 +31,7 @@ export const getProfile = async (userId: string) => {
   return data
 }
 
-export const updateProfile = async (userId: string, updates: any) => {
+export const updateProfile = async (supabase, userId: string, updates: any) => {
   const { data, error } = await supabase
     .from('profiles')
     .update(updates)
