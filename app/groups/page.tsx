@@ -91,6 +91,7 @@ export default function GroupsPage() {
       const { createGroup: createGroupLib } = await import('../../lib/groups')
       
       await createGroupLib(
+        supabase,
         newGroupName.trim(),
         newGroupDescription.trim() || undefined
       )
