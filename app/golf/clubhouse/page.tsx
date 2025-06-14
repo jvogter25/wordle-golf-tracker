@@ -81,7 +81,7 @@ export default function ClubhousePage() {
   const handleJoinGroup = async (e) => {
     e.preventDefault();
     try {
-      await joinGroupByCode(joinCode.trim().toUpperCase());
+      await joinGroupByCode(supabase, joinCode.trim().toUpperCase());
       setMessage('Successfully joined group!');
       setShowJoinForm(false);
       setJoinCode('');
@@ -95,7 +95,7 @@ export default function ClubhousePage() {
   const handleCreateGroup = async (e) => {
     e.preventDefault();
     try {
-      await createGroup(newGroupName.trim());
+      await createGroup(supabase, newGroupName.trim());
       setShowCreateForm(false);
       setNewGroupName('');
       setLoading(true);
