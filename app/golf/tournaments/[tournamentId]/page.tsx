@@ -138,26 +138,26 @@ export default function TournamentLeaderboardPage() {
                   <div key={player.id} className="bg-[hsl(var(--muted))] rounded-xl p-4 shadow-sm">
                     {/* Mobile Layout */}
                     <div className="md:hidden">
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 bg-[#6aaa64] rounded-full flex items-center justify-center text-white font-bold text-sm">
+                          <div className="w-10 h-10 bg-[#6aaa64] rounded-full flex items-center justify-center text-white font-bold text-lg">
                             {pos}
                           </div>
                           <img 
                             src={player.avatar_url || '/golf/jake-avatar.jpg'} 
                             alt={player.display_name} 
-                            className="w-10 h-10 rounded-full border-2 border-[hsl(var(--primary))]" 
+                            className="w-12 h-12 rounded-full border-2 border-[hsl(var(--primary))]" 
                           />
                         </div>
-                        <div className="text-2xl font-bold text-[#6aaa64]">
+                        <div className="text-3xl font-bold text-[#6aaa64]">
                           {player.score}
                         </div>
                       </div>
-                      <div className={`text-lg font-semibold ${nameClass}`}>
+                      <div className={`text-xl font-bold mb-1 ${nameClass}`}>
                         {player.display_name}
                       </div>
-                      <div className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-                        {tournamentName}
+                      <div className="text-sm text-[hsl(var(--muted-foreground))] flex items-center">
+                        🎂 {tournamentName}
                       </div>
                     </div>
                     

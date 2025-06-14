@@ -104,6 +104,7 @@ export default function TournamentsPage() {
         tournament_participants(count)
       `)
       .eq('year', new Date().getFullYear())
+      .eq('tournament_type', 'birthday')  // Only fetch birthday tournaments
       .order('start_date', { ascending: true });
     
     // Add participant count to each tournament
@@ -218,12 +219,15 @@ export default function TournamentsPage() {
                 <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block mb-4">
                   <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border-2 border-yellow-400 hover:shadow-lg transition">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="font-semibold text-lg">{t.name} 
-                        <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">🎂 Birthday</span>
+                      <div className="font-semibold text-lg flex items-center">
+                        🎂 {t.name}
                       </div>
                       <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
                     </div>
-                    <div className="text-sm text-[hsl(var(--muted-foreground))]">{t.venue}</div>
+                    <div className="text-sm text-[hsl(var(--muted-foreground))] bg-yellow-50 px-3 py-2 rounded-lg mt-3">
+                      <span className="font-medium text-yellow-800">Birthday Tournament</span> - Special 0.5 stroke advantage for the birthday person!
+                    </div>
+                    <div className="text-sm text-[hsl(var(--muted-foreground))] mt-2">{t.venue}</div>
                   </div>
                 </Link>
               ))}
