@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { submitScore } from '../../../lib/scores';
+import { getUserGroups } from '../../../lib/groups';
 
 function WordleHeader({ label }: { label: string }) {
   const colors = ['bg-[#6aaa64]', 'bg-[#c9b458]', 'bg-[#787c7e]'];
@@ -73,15 +75,29 @@ function BurgerMenu() {
 
 export default function DevSubmitScorePage() {
   const [attempts, setAttempts] = useState<number | ''>('');
+  const [selectedGroup, setSelectedGroup] = useState('');
+  const [groups, setGroups] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const router = useRouter();
   const { user, supabase } = useAuth();
 
+  useEffect(() => {
+    if (user) {
+      getUserGroups(supabase).then(setGroups);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (groups.length === 1 && selectedGroup === '') {
+      setSelectedGroup(groups[0].id);
+    }
+  }, [groups, selectedGroup]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!attempts) return;
+    if (!attempts || !selectedGroup) return;
 
     setSubmitting(true);
     setError(null);
@@ -97,18 +113,8 @@ export default function DevSubmitScorePage() {
       // Get current date in YYYY-MM-DD format
       const today = new Date().toISOString().split('T')[0];
 
-      // Insert score
-      const { error: insertError } = await supabase
-        .from('scores')
-        .insert([
-          {
-            user_id: user.id,
-            score: attempts,
-            date: today,
-          }
-        ]);
-
-      if (insertError) throw insertError;
+      // Submit score using the library function
+      await submitScore(supabase, selectedGroup, attempts, today);
 
       setSuccess(true);
       setAttempts('');
@@ -160,6 +166,23 @@ export default function DevSubmitScorePage() {
             </div>
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
+            {groups.length > 1 && (
+              <div>
+                <label className="block text-[hsl(var(--muted-foreground))] mb-1">Select Group</label>
+                <select
+                  className="w-full p-2 border border-[hsl(var(--border))] rounded-md bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]"
+                  value={selectedGroup}
+                  onChange={(e) => setSelectedGroup(e.target.value)}
+                  disabled={submitting}
+                  required
+                >
+                  <option value="">Select a group</option>
+                  {groups.map(g => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label className="block text-[hsl(var(--muted-foreground))] mb-1">Wordle Attempts</label>
               <select 
@@ -167,6 +190,7 @@ export default function DevSubmitScorePage() {
                 value={attempts}
                 onChange={(e) => setAttempts(e.target.value ? Number(e.target.value) : '')}
                 disabled={submitting}
+                required
               >
                 <option value="">Select attempts</option>
                 {attemptOptions.map(opt => (
@@ -177,7 +201,7 @@ export default function DevSubmitScorePage() {
             <button 
               type="submit" 
               className="w-full bg-[#6aaa64] text-white font-bold py-2 rounded-md hover:bg-[#5a9954] transition disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={submitting || !attempts}
+              disabled={submitting || !attempts || !selectedGroup}
             >
               {submitting ? 'Submitting...' : 'Submit'}
             </button>
