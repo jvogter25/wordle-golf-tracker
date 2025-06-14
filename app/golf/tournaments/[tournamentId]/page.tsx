@@ -117,7 +117,8 @@ export default function TournamentLeaderboardPage() {
           </div>
         </nav>
         <div className="mb-2">
-          <WordleHeader label={tournamentName.toUpperCase()} />
+          <WordleHeader label={tournamentName.replace("'s Birthday Tournament", "").toUpperCase()} />
+          <WordleHeader label="BIRTHDAY TOURNAMENT" />
           <WordleHeader label="LEADERBOARD" />
           {tournamentDates && (
             <div className="text-center text-sm text-[hsl(var(--muted-foreground))] mb-4" style={{marginTop: '-1.5rem'}}>
