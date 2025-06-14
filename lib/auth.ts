@@ -1,22 +1,22 @@
-export const signInWithEmail = async (supabase, email: string) => {
-  const { error } = await supabase.auth.signInWithOtp({
+import { SupabaseClient } from '@supabase/supabase-js'
+
+export async function signInWithEmail(client: SupabaseClient, email: string) {
+  const { error } = await client.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: 'wordle-golf-tracker://auth',
-    },
+      emailRedirectTo: `${window.location.origin}/auth/callback`
+    }
   })
-  
-  if (error) throw error
-  return { success: true }
-}
-
-export const signOut = async (supabase) => {
-  const { error } = await supabase.auth.signOut()
   if (error) throw error
 }
 
-export const getCurrentUser = async (supabase) => {
-  const { data: { user } } = await supabase.auth.getUser()
+export async function signOut(client: SupabaseClient) {
+  const { error } = await client.auth.signOut()
+  if (error) throw error
+}
+
+export async function getCurrentUser(client: SupabaseClient) {
+  const { data: { user } } = await client.auth.getUser()
   return user
 }
 

@@ -1,51 +1,276 @@
-import { supabase } from './supabase'
+import { SupabaseClient } from '@supabase/supabase-js'
 import { Tournament, TournamentParticipant, BirthdayTournamentPreferences } from './supabase'
 
 // Major tournament schedule for 2025 (will need to be updated annually)
 const MAJOR_TOURNAMENTS_2025 = [
   {
-    name: "The Masters Tournament",
-    start_date: "2025-04-07", // Monday of tournament week
-    venue: "Augusta National Golf Club, Georgia"
+    name: "The Masters",
+    start_date: "2025-04-10",
+    end_date: "2025-04-13",
+    type: "major",
+    status: "upcoming"
   },
   {
     name: "PGA Championship",
-    start_date: "2025-05-12", // Monday of tournament week  
-    venue: "Quail Hollow Golf Club, North Carolina"
+    start_date: "2025-05-15",
+    end_date: "2025-05-18",
+    type: "major",
+    status: "upcoming"
   },
   {
-    name: "U.S. Open Championship",
-    start_date: "2025-06-09", // Monday of tournament week
-    venue: "Oakmont Country Club, Pennsylvania"
+    name: "U.S. Open",
+    start_date: "2025-06-12",
+    end_date: "2025-06-15",
+    type: "major",
+    status: "upcoming"
   },
   {
     name: "The Open Championship",
-    start_date: "2025-07-14", // Monday of tournament week
-    venue: "Royal Portrush Golf Club, Northern Ireland"
+    start_date: "2025-07-17",
+    end_date: "2025-07-20",
+    type: "major",
+    status: "upcoming"
   }
 ]
 
-// Create major tournaments for a given year
-export const createMajorTournaments = async (year: number) => {
-  const tournaments = MAJOR_TOURNAMENTS_2025.map(tournament => ({
-    name: tournament.name,
-    tournament_type: 'major' as const,
-    year,
-    start_date: tournament.start_date.replace('2025', year.toString()),
-    end_date: addDays(tournament.start_date.replace('2025', year.toString()), 6),
-    venue: tournament.venue,
-    is_active: false,
-    birthday_user_id: null,
-    birthday_advantage: 0.0
-  }))
-
-  const { data, error } = await supabase
+export async function getUpcomingTournaments(client: SupabaseClient) {
+  const { data, error } = await client
     .from('tournaments')
-    .insert(tournaments)
-    .select()
+    .select('*')
+    .gte('start_date', new Date().toISOString())
+    .order('start_date', { ascending: true })
 
   if (error) throw error
   return data
+}
+
+export async function getActiveTournaments(client: SupabaseClient) {
+  const today = new Date().toISOString()
+  const { data, error } = await client
+    .from('tournaments')
+    .select('*')
+    .lte('start_date', today)
+    .gte('end_date', today)
+    .order('start_date', { ascending: true })
+
+  if (error) throw error
+  return data
+}
+
+export async function getPastTournaments(client: SupabaseClient) {
+  const { data, error } = await client
+    .from('tournaments')
+    .select('*')
+    .lt('end_date', new Date().toISOString())
+    .order('end_date', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+export async function getTournamentById(client: SupabaseClient, id: string) {
+  const { data, error } = await client
+    .from('tournaments')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function getTournamentParticipants(client: SupabaseClient, tournamentId: string) {
+  const { data, error } = await client
+    .from('tournament_participants')
+    .select(`
+      *,
+      profiles (display_name)
+    `)
+    .eq('tournament_id', tournamentId)
+    .order('qualifying_total', { ascending: true })
+
+  if (error) throw error
+  return data
+}
+
+export async function joinTournament(client: SupabaseClient, tournamentId: string, userId: string) {
+  const { error } = await client
+    .from('tournament_participants')
+    .insert({
+      tournament_id: tournamentId,
+      user_id: userId,
+      joined_at: new Date().toISOString()
+    })
+
+  if (error) throw error
+}
+
+export async function leaveTournament(client: SupabaseClient, tournamentId: string, userId: string) {
+  const { error } = await client
+    .from('tournament_participants')
+    .delete()
+    .eq('tournament_id', tournamentId)
+    .eq('user_id', userId)
+
+  if (error) throw error
+}
+
+export async function submitTournamentScore(
+  client: SupabaseClient,
+  tournamentId: string,
+  userId: string,
+  score: number,
+  puzzleDate: string
+) {
+  const { error } = await client
+    .from('tournament_scores')
+    .insert({
+      tournament_id: tournamentId,
+      user_id: userId,
+      score,
+      puzzle_date: puzzleDate,
+      submitted_at: new Date().toISOString()
+    })
+
+  if (error) throw error
+}
+
+export async function getTournamentScores(
+  client: SupabaseClient,
+  tournamentId: string,
+  userId: string
+) {
+  const { data, error } = await client
+    .from('tournament_scores')
+    .select('*')
+    .eq('tournament_id', tournamentId)
+    .eq('user_id', userId)
+    .order('puzzle_date', { ascending: true })
+
+  if (error) throw error
+  return data
+}
+
+export async function calculateTournamentCut(client: SupabaseClient, tournamentId: string) {
+  const { error } = await client.rpc('calculate_tournament_cut', {
+    tournament_id: tournamentId
+  })
+  if (error) throw error
+}
+
+export async function getBirthdayTournamentPreferences(client: SupabaseClient, userId: string) {
+  const { data, error } = await client
+    .from('birthday_tournament_preferences')
+    .select('*')
+    .eq('user_id', userId)
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function updateBirthdayTournamentPreferences(
+  client: SupabaseClient,
+  userId: string,
+  preferences: BirthdayTournamentPreferences
+) {
+  const { error } = await client
+    .from('birthday_tournament_preferences')
+    .upsert({
+      user_id: userId,
+      ...preferences
+    })
+
+  if (error) throw error
+}
+
+export async function createBirthdayTournament(
+  client: SupabaseClient,
+  userId: string,
+  preferences: BirthdayTournamentPreferences
+) {
+  const { error } = await client
+    .from('tournaments')
+    .insert({
+      name: `${preferences.display_name}'s Birthday Tournament`,
+      start_date: preferences.start_date,
+      end_date: preferences.end_date,
+      type: 'birthday',
+      created_by: userId,
+      status: 'upcoming'
+    })
+
+  if (error) throw error
+}
+
+export async function getTournamentLeaderboard(client: SupabaseClient, tournamentId: string) {
+  const { data, error } = await client.rpc('get_tournament_leaderboard', {
+    tournament_id: tournamentId
+  })
+
+  if (error) throw error
+  return data
+}
+
+export async function generateBirthdayTournaments(supabase: SupabaseClient) {
+  // Get all users with birthday preferences
+  const { data: preferences, error: prefsError } = await supabase
+    .from('birthday_tournament_preferences')
+    .select('*')
+
+  if (prefsError) throw prefsError
+
+  const today = new Date()
+  const results = []
+
+  for (const pref of preferences) {
+    const birthday = new Date(pref.birthday)
+    const isBirthdayMonth = birthday.getMonth() === today.getMonth()
+    const isBirthdayDay = birthday.getDate() === today.getDate()
+
+    if (isBirthdayMonth && isBirthdayDay) {
+      try {
+        const tournament = await createBirthdayTournament(supabase, pref.user_id, pref)
+        results.push({ success: true, tournament })
+      } catch (error) {
+        results.push({ success: false, error, userId: pref.user_id })
+      }
+    }
+  }
+
+  return results
+}
+
+export async function getMajorTournaments(supabase: SupabaseClient) {
+  const { data, error } = await supabase
+    .from('tournaments')
+    .select('*')
+    .eq('is_major', true)
+    .order('start_date', { ascending: true })
+
+  if (error) throw error
+  return data
+}
+
+export async function createMajorTournaments(supabase: SupabaseClient) {
+  const results = []
+
+  for (const tournament of MAJOR_TOURNAMENTS_2025) {
+    try {
+      const { data, error } = await supabase
+        .from('tournaments')
+        .insert([tournament])
+        .select()
+        .single()
+
+      if (error) throw error
+      results.push({ success: true, tournament: data })
+    } catch (error) {
+      results.push({ success: false, error, tournament })
+    }
+  }
+
+  return results
 }
 
 // Create birthday tournaments for all group members
@@ -185,38 +410,6 @@ export const getTournamentLeaderboard = async (tournamentId: string, groupId: st
   )
 
   return participantsWithScores
-}
-
-// Calculate and apply tournament cut
-export const calculateTournamentCut = async (tournamentId: string, groupId: string) => {
-  // Use the database function to calculate cuts
-  const { error } = await supabase.rpc('calculate_tournament_cut', {
-    tournament_id_param: tournamentId,
-    group_id_param: groupId
-  })
-
-  if (error) throw error
-
-  // Get updated participants to return cut results
-  const { data: participants } = await supabase
-    .from('tournament_participants')
-    .select(`
-      *,
-      profiles (display_name)
-    `)
-    .eq('tournament_id', tournamentId)
-    .eq('group_id', groupId)
-    .order('qualifying_total', { ascending: true })
-
-  const qualifiers = participants?.filter(p => p.made_cut) || []
-  const cutLine = qualifiers.length
-
-  return {
-    participants: participants || [],
-    qualifiers,
-    cutLine,
-    totalParticipants: participants?.length || 0
-  }
 }
 
 // Activate tournaments based on current date
