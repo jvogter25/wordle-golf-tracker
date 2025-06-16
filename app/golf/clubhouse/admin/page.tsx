@@ -65,14 +65,27 @@ export default function ClubhouseAdminPage() {
         }
         setScores(scoresData || []);
         
-        // Fetch groups
+        // Fetch groups - try different approaches to bypass RLS issues
         console.log('🏢 FETCHING GROUPS...');
+        
+        // First try: Get all groups
         const { data: groupsData, error: groupsError } = await supabase.from('groups').select('*');
-        console.log('🏢 GROUPS RESULT:', { 
+        console.log('🏢 GROUPS RESULT (all):', { 
           data: groupsData, 
           error: groupsError,
           dataLength: groupsData?.length,
           firstGroup: groupsData?.[0]
+        });
+        
+        // Second try: Get groups where user is creator
+        const { data: userGroupsData, error: userGroupsError } = await supabase
+          .from('groups')
+          .select('*')
+          .eq('created_by', user.id);
+        console.log('🏢 USER GROUPS RESULT:', { 
+          data: userGroupsData, 
+          error: userGroupsError,
+          dataLength: userGroupsData?.length
         });
         if (groupsError) {
           errorList.push(`Groups error: ${groupsError.message}`);
