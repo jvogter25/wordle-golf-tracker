@@ -26,6 +26,7 @@ const navLinks = [
   { href: '/golf/tournaments', label: 'Tournaments' },
   { href: '/golf/submit', label: 'Submit Score' },
   { href: '/golf/clubhouse', label: 'Clubhouse' },
+  { href: '/golf/clubhouse/admin-working', label: 'Admin Center' },
 ];
 
 function BurgerMenu() {
