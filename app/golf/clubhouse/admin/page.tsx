@@ -5,7 +5,7 @@ import { Database } from '@/types/supabase';
 import { toast } from 'sonner';
 
 export default function ClubhouseAdminPage() {
-  console.log('🚀 Admin page component loaded!');
+  console.log('🚀 ADMIN PAGE COMPONENT LOADED!');
   
   const [members, setMembers] = useState<any[]>([]);
   const [scores, setScores] = useState<any[]>([]);
@@ -20,11 +20,13 @@ export default function ClubhouseAdminPage() {
   const [errors, setErrors] = useState<string[]>([]);
   const supabase = createClientComponentClient<Database>();
 
-  console.log('🔧 Admin page state:', { 
+  console.log('🔧 ADMIN PAGE STATE:', { 
     loading, 
     groupsLength: groups.length, 
     membersLength: members.length,
-    errorsLength: errors.length 
+    errorsLength: errors.length,
+    selectedGroup,
+    newGroupCode
   });
 
   useEffect(() => {
@@ -64,19 +66,29 @@ export default function ClubhouseAdminPage() {
         setScores(scoresData || []);
         
         // Fetch groups
-        console.log('Fetching groups...');
+        console.log('🏢 FETCHING GROUPS...');
         const { data: groupsData, error: groupsError } = await supabase.from('groups').select('*');
-        console.log('Groups result:', { data: groupsData, error: groupsError });
+        console.log('🏢 GROUPS RESULT:', { 
+          data: groupsData, 
+          error: groupsError,
+          dataLength: groupsData?.length,
+          firstGroup: groupsData?.[0]
+        });
         if (groupsError) {
           errorList.push(`Groups error: ${groupsError.message}`);
+          console.log('❌ GROUPS ERROR:', groupsError);
         }
         setGroups(groupsData || []);
         
         if (groupsData && groupsData.length > 0) {
           setSelectedGroup(groupsData[0].id);
-          console.log('Selected first group:', groupsData[0].id);
+          console.log('✅ SELECTED FIRST GROUP:', {
+            id: groupsData[0].id,
+            name: groupsData[0].name,
+            inviteCode: groupsData[0].invite_code
+          });
         } else {
-          console.log('No groups found');
+          console.log('❌ NO GROUPS FOUND');
           errorList.push('No groups found - you may need to create a group first');
         }
         

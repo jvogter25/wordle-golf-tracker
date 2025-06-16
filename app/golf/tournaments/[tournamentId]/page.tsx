@@ -225,9 +225,15 @@ export default function TournamentLeaderboardPage() {
           const dayOfWeek = scoreDate.getDay(); // 0=Sunday, 1=Monday, etc.
           const isQualifyingDay = [1,2,3,4].includes(dayOfWeek); // Mon-Thu
           
-          console.log('Day analysis:', {
-            dayOfWeek,
-            isQualifyingDay,
+          console.log('🗓️ DAY ANALYSIS DETAILED:', {
+            scoreDate: scoreDate,
+            scoreDateString: scoreDate.toString(),
+            dayOfWeek: dayOfWeek,
+            dayNames: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+            dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayOfWeek],
+            qualifyingDays: [1,2,3,4],
+            isQualifyingDay: isQualifyingDay,
+            includesCheck: [1,2,3,4].includes(dayOfWeek),
             date: score.puzzle_date
           });
           
