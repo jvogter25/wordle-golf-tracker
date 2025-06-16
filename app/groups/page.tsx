@@ -19,6 +19,9 @@ export default function GroupsPage() {
   const [message, setMessage] = useState('')
   const [copiedCode, setCopiedCode] = useState('')
 
+  // Check if current user is admin
+  const isAdmin = user?.email === 'jakevogt25@gmail.com' || user?.email === 'jake.vogt@softchoice.com'
+
   useEffect(() => {
     console.log('🔄 Groups page: Auth state changed', { user: user?.email, authLoading })
     
@@ -193,12 +196,14 @@ export default function GroupsPage() {
             >
               Join Group
             </button>
-            <button
-              onClick={() => setShowCreateForm(true)}
-              className="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600"
-            >
-              Create Group
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => setShowCreateForm(true)}
+                className="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600"
+              >
+                Create Group
+              </button>
+            )}
           </div>
         </div>
 
@@ -210,8 +215,8 @@ export default function GroupsPage() {
           </div>
         )}
 
-        {/* Create Group Modal */}
-        {showCreateForm && (
+        {/* Create Group Modal - Only show for admins */}
+        {showCreateForm && isAdmin && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-md">
               <h2 className="text-xl font-bold mb-4">Create New Group</h2>
@@ -276,12 +281,12 @@ export default function GroupsPage() {
                     value={joinCode}
                     onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 font-mono text-center"
-                    placeholder="ABCD12"
-                    maxLength={6}
+                    placeholder="Enter group code"
+                    maxLength={10}
                     required
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Enter the 6-character code from your family admin
+                    Enter the invite code provided by your group admin
                   </p>
                 </div>
                 <div className="flex space-x-3">
@@ -309,7 +314,12 @@ export default function GroupsPage() {
           <div className="text-center py-12">
             <div className="text-6xl mb-4">👥</div>
             <h2 className="text-xl font-semibold text-gray-900 mb-2">No groups yet</h2>
-            <p className="text-gray-600 mb-6">Create a new group or join an existing one to get started</p>
+            <p className="text-gray-600 mb-6">
+              {isAdmin 
+                ? "Create a new group or join an existing one to get started" 
+                : "Ask your group admin for an invite code to join a group"
+              }
+            </p>
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -14,16 +14,25 @@ export interface Database {
           id: string
           created_at: string
           name: string
+          description: string | null
+          created_by: string
+          invite_code: string
         }
         Insert: {
           id?: string
           created_at?: string
           name: string
+          description?: string | null
+          created_by: string
+          invite_code: string
         }
         Update: {
           id?: string
           created_at?: string
           name?: string
+          description?: string | null
+          created_by?: string
+          invite_code?: string
         }
       }
       users: {
