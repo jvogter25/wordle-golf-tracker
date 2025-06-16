@@ -161,6 +161,16 @@ export default function TournamentLeaderboardPage() {
         );
         console.log('Today score found:', todayScore);
         
+        // Also check for yesterday's score in case of date issues
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayDateString = yesterday.toISOString().split('T')[0];
+        const yesterdayScore = scoresData?.find(score => 
+          score.user_id === tournament.birthday_user_id && 
+          score.puzzle_date === yesterdayDateString
+        );
+        console.log('Yesterday score found:', yesterdayScore);
+        
         // Process scores manually
         const playerScores = new Map();
         
@@ -172,6 +182,7 @@ export default function TournamentLeaderboardPage() {
             userId,
             date: score.puzzle_date,
             rawScore: score.raw_score,
+            attempts: score.attempts, // Check if attempts field has the real score
             isBirthdayPerson: tournament.birthday_user_id === userId
           });
           
@@ -192,12 +203,18 @@ export default function TournamentLeaderboardPage() {
           const player = playerScores.get(userId);
           const scoreDate = new Date(score.puzzle_date);
           const today = new Date();
+          
+          // More flexible date comparison - check if it's within the last 2 days
+          const daysDiff = Math.abs(today.getTime() - scoreDate.getTime()) / (1000 * 60 * 60 * 24);
           const isToday = scoreDate.toDateString() === today.toDateString();
+          const isRecent = daysDiff <= 1; // Within 1 day
           
           console.log('Date comparison:', {
             scoreDate: scoreDate.toDateString(),
             today: today.toDateString(),
-            isToday
+            daysDiff,
+            isToday,
+            isRecent
           });
           
           // Check if this is a qualifying round (Mon-Thu)
@@ -210,17 +227,34 @@ export default function TournamentLeaderboardPage() {
             date: score.puzzle_date
           });
           
-          // Use raw score for individual day scoring
-          let adjustedScore = score.raw_score;
+          // Use the correct score field - try attempts first, then raw_score
+          let actualScore = score.attempts || score.raw_score;
+          
+          console.log('Score field analysis:', {
+            attempts: score.attempts,
+            raw_score: score.raw_score,
+            actualScore: actualScore
+          });
+          
+          // If both fields are 0 but user says they scored par, there's a data issue
+          // For now, let's use the raw value and investigate the submission process
+          if (actualScore === 0) {
+            console.log('WARNING: Score is 0 - this may indicate a score submission issue');
+            // Don't assume failed attempt - use the actual stored value for now
+            actualScore = score.raw_score; // Keep as 0 to see the real issue
+          }
+          
+          // Use actual score for individual day scoring
+          let adjustedScore = actualScore;
           
           // For birthday person on qualifying days, apply advantage to individual score
           if (tournament.tournament_type === 'birthday' && 
               tournament.birthday_user_id === userId && 
               isQualifyingDay) {
-            adjustedScore = Math.max(0, score.raw_score - (tournament.birthday_advantage || 0.5));
+            adjustedScore = Math.max(0, actualScore - (tournament.birthday_advantage || 0.5));
             player.qualifyingDays++;
             console.log('Applied birthday advantage:', {
-              rawScore: score.raw_score,
+              actualScore: actualScore,
               advantage: tournament.birthday_advantage,
               adjustedScore
             });
@@ -228,16 +262,17 @@ export default function TournamentLeaderboardPage() {
           
           player.scores.push({
             date: score.puzzle_date,
-            rawScore: score.raw_score,
+            rawScore: actualScore,
             adjustedScore: adjustedScore,
             isToday: isToday
           });
           
           player.weekScore += adjustedScore;
           
-          if (isToday) {
+          // Use recent score as "today" score if no exact today score
+          if (isToday || (isRecent && player.todayScore === null)) {
             player.todayScore = adjustedScore;
-            console.log('Set today score:', adjustedScore);
+            console.log('Set today score:', adjustedScore, isToday ? '(exact today)' : '(recent)');
           }
           
           console.log('Player state after processing:', {
