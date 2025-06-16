@@ -178,12 +178,16 @@ export default function TournamentLeaderboardPage() {
           const userId = score.user_id;
           const profile = (score.profiles as any);
           
-          console.log('Processing score:', {
+          console.log('🔍 DETAILED SCORE PROCESSING:', {
             userId,
             date: score.puzzle_date,
             rawScore: score.raw_score,
-            attempts: score.attempts, // Check if attempts field has the real score
-            isBirthdayPerson: tournament.birthday_user_id === userId
+            attempts: score.attempts,
+            isBirthdayPerson: tournament.birthday_user_id === userId,
+            tournamentBirthdayUserId: tournament.birthday_user_id,
+            userIdMatch: tournament.birthday_user_id === userId,
+            tournamentType: tournament.tournament_type,
+            birthdayAdvantage: tournament.birthday_advantage
           });
           
           if (!playerScores.has(userId)) {
@@ -248,15 +252,33 @@ export default function TournamentLeaderboardPage() {
           let adjustedScore = actualScore;
           
           // For birthday person on qualifying days, apply advantage to individual score
+          console.log('🎂 BIRTHDAY ADVANTAGE CHECK:', {
+            tournamentType: tournament.tournament_type,
+            isBirthdayTournament: tournament.tournament_type === 'birthday',
+            birthdayUserId: tournament.birthday_user_id,
+            currentUserId: userId,
+            isCurrentUserBirthdayPerson: tournament.birthday_user_id === userId,
+            isQualifyingDay: isQualifyingDay,
+            dayOfWeek: dayOfWeek,
+            shouldApplyAdvantage: tournament.tournament_type === 'birthday' && tournament.birthday_user_id === userId && isQualifyingDay
+          });
+          
           if (tournament.tournament_type === 'birthday' && 
               tournament.birthday_user_id === userId && 
               isQualifyingDay) {
             adjustedScore = Math.max(0, actualScore - (tournament.birthday_advantage || 0.5));
             player.qualifyingDays++;
-            console.log('Applied birthday advantage:', {
+            console.log('✅ APPLIED BIRTHDAY ADVANTAGE:', {
               actualScore: actualScore,
               advantage: tournament.birthday_advantage,
-              adjustedScore
+              adjustedScore,
+              qualifyingDaysCount: player.qualifyingDays
+            });
+          } else {
+            console.log('❌ NO BIRTHDAY ADVANTAGE APPLIED - Reason:', {
+              wrongTournamentType: tournament.tournament_type !== 'birthday',
+              wrongUser: tournament.birthday_user_id !== userId,
+              notQualifyingDay: !isQualifyingDay
             });
           }
           
@@ -288,6 +310,14 @@ export default function TournamentLeaderboardPage() {
           const dayOfWeek = today.getDay(); // 0=Sunday, 1=Monday, etc.
           const isWeekend = [5, 6, 0].includes(dayOfWeek); // Fri, Sat, Sun
           
+          console.log('🏁 WEEKEND ADVANTAGE CHECK:', {
+            today: today.toDateString(),
+            dayOfWeek: dayOfWeek,
+            isWeekend: isWeekend,
+            tournamentType: tournament.tournament_type,
+            birthdayUserId: tournament.birthday_user_id
+          });
+          
           // If it's the weekend, birthday person should have full qualifying advantage
           // even if they haven't submitted scores for all qualifying days
           if (isWeekend) {
@@ -306,16 +336,19 @@ export default function TournamentLeaderboardPage() {
                 const additionalAdvantage = fullQualifyingAdvantage - alreadyAppliedAdvantage;
                 
                 player.weekScore -= additionalAdvantage;
-                console.log('Applied weekend birthday advantage:', {
+                console.log('🎉 APPLIED WEEKEND BIRTHDAY ADVANTAGE:', {
                   userId,
                   qualifyingScoresSubmitted,
                   fullQualifyingAdvantage,
                   alreadyAppliedAdvantage,
                   additionalAdvantage,
+                  oldWeekScore: player.weekScore + additionalAdvantage,
                   newWeekScore: player.weekScore
                 });
               }
             });
+          } else {
+            console.log('⏰ NOT WEEKEND - No additional advantage applied');
           }
         }
 
