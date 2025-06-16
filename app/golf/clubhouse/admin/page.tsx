@@ -211,6 +211,62 @@ export default function ClubhouseAdminPage() {
     toast.success('Group code copied to clipboard!');
   };
 
+  const createTestGroup = async () => {
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        toast.error('Authentication failed');
+        return;
+      }
+
+      // Create a test group
+      const { data: group, error: groupError } = await supabase
+        .from('groups')
+        .insert({
+          name: 'Test Group',
+          description: 'Test group for admin functionality',
+          created_by: user.id,
+          invite_code: 'TESTGRP'
+        })
+        .select()
+        .single();
+
+      if (groupError) {
+        console.error('Group creation error:', groupError);
+        toast.error(`Error creating group: ${groupError.message}`);
+        return;
+      }
+
+      // Add user as admin member
+      const { error: memberError } = await supabase
+        .from('group_members')
+        .insert({
+          group_id: group.id,
+          user_id: user.id,
+          role: 'admin'
+        });
+
+      if (memberError) {
+        console.error('Member creation error:', memberError);
+        toast.error(`Error adding admin member: ${memberError.message}`);
+        return;
+      }
+
+      toast.success('Test group created successfully!');
+      
+      // Refresh groups data
+      const { data: groupsData } = await supabase.from('groups').select('*');
+      setGroups(groupsData || []);
+      
+      if (groupsData && groupsData.length > 0) {
+        setSelectedGroup(groupsData[0].id);
+      }
+    } catch (error) {
+      console.error('Error in createTestGroup:', error);
+      toast.error(`Unexpected error: ${error}`);
+    }
+  };
+
   const selectedGroupData = groups.find(g => g.id === selectedGroup);
 
   return (
@@ -346,7 +402,13 @@ export default function ClubhouseAdminPage() {
             </div>
           ) : (
             <div className="text-center py-4">
-              <p className="text-[hsl(var(--muted-foreground))]">No groups found. Create a group first.</p>
+              <p className="text-[hsl(var(--muted-foreground))] mb-4">No groups found. Create a group first.</p>
+              <button
+                onClick={createTestGroup}
+                className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition"
+              >
+                Create Test Group
+              </button>
             </div>
           )}
         </div>
