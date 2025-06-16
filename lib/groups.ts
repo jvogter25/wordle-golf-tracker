@@ -66,14 +66,32 @@ export async function getUserGroups(client: SupabaseClient) {
 }
 
 export async function getGroupMembers(client: SupabaseClient, groupId: string) {
-  // Use database function to get group members
-  const { data, error } = await client.rpc('get_group_members', {
-    group_id: groupId,
-  })
+  // Simple direct query instead of RPC
+  const { data, error } = await client
+    .from('group_members')
+    .select(`
+      *,
+      profiles (
+        id,
+        display_name,
+        avatar_url,
+        handicap
+      )
+    `)
+    .eq('group_id', groupId)
   
-  if (error) throw error
+  if (error) {
+    console.log('Group members query error:', error)
+    return []
+  }
   
-  return data || []
+  // Transform the data to match expected format
+  return data?.map(member => ({
+    id: member.profiles?.id,
+    display_name: member.profiles?.display_name,
+    avatar_url: member.profiles?.avatar_url,
+    handicap: member.profiles?.handicap || 0
+  })) || []
 }
 
 export async function leaveGroup(client: SupabaseClient, groupId: string) {
