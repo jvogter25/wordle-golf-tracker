@@ -115,24 +115,7 @@ export default function TournamentLeaderboardPage() {
       
       if (leaderboardError) {
         
-        // TEMPORARY FIX: Use current week dates instead of tournament dates
-        // The tournament was created with wrong dates (June 2025 instead of December 2024)
-        const today = new Date();
-        const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-        const daysToMonday = currentDay === 0 ? -6 : 1 - currentDay;
-        
-        const monday = new Date(today);
-        monday.setDate(today.getDate() + daysToMonday);
-        
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        
-        const actualStartDate = monday.toISOString().split('T')[0];
-        const actualEndDate = sunday.toISOString().split('T')[0];
-        
-        console.log('Using corrected dates:', actualStartDate, 'to', actualEndDate);
-        
-        // Fallback: Query scores directly using corrected dates
+        // Fallback: Query scores directly
         const { data: scoresData, error: scoresError } = await supabase
           .from('scores')
           .select(`
@@ -143,8 +126,8 @@ export default function TournamentLeaderboardPage() {
               avatar_url
             )
           `)
-          .gte('puzzle_date', actualStartDate)
-          .lte('puzzle_date', actualEndDate);
+          .gte('puzzle_date', tournament.start_date)
+          .lte('puzzle_date', tournament.end_date);
         
         if (scoresError) {
           setLoading(false);
@@ -165,9 +148,18 @@ export default function TournamentLeaderboardPage() {
           .eq('user_id', tournament.birthday_user_id);
         
         console.log('All user scores:', allUserScores);
-        console.log('Tournament dates (WRONG):', tournament.start_date, 'to', tournament.end_date);
-        console.log('Corrected dates:', actualStartDate, 'to', actualEndDate);
-        console.log('Filtered scores with corrected dates:', scoresData);
+        console.log('Tournament dates:', tournament.start_date, 'to', tournament.end_date);
+        console.log('Filtered scores:', scoresData);
+        console.log('Today date string:', new Date().toDateString());
+        console.log('Today ISO date:', new Date().toISOString().split('T')[0]);
+        
+        // Check if today's score exists
+        const todayDateString = new Date().toISOString().split('T')[0];
+        const todayScore = scoresData?.find(score => 
+          score.user_id === tournament.birthday_user_id && 
+          score.puzzle_date === todayDateString
+        );
+        console.log('Today score found:', todayScore);
         
         // Process scores manually
         const playerScores = new Map();
@@ -175,6 +167,13 @@ export default function TournamentLeaderboardPage() {
         scoresData?.forEach(score => {
           const userId = score.user_id;
           const profile = (score.profiles as any);
+          
+          console.log('Processing score:', {
+            userId,
+            date: score.puzzle_date,
+            rawScore: score.raw_score,
+            isBirthdayPerson: tournament.birthday_user_id === userId
+          });
           
           if (!playerScores.has(userId)) {
             playerScores.set(userId, {
@@ -195,9 +194,21 @@ export default function TournamentLeaderboardPage() {
           const today = new Date();
           const isToday = scoreDate.toDateString() === today.toDateString();
           
+          console.log('Date comparison:', {
+            scoreDate: scoreDate.toDateString(),
+            today: today.toDateString(),
+            isToday
+          });
+          
           // Check if this is a qualifying round (Mon-Thu)
           const dayOfWeek = scoreDate.getDay(); // 0=Sunday, 1=Monday, etc.
           const isQualifyingDay = [1,2,3,4].includes(dayOfWeek); // Mon-Thu
+          
+          console.log('Day analysis:', {
+            dayOfWeek,
+            isQualifyingDay,
+            date: score.puzzle_date
+          });
           
           // Use raw score for individual day scoring
           let adjustedScore = score.raw_score;
@@ -208,6 +219,11 @@ export default function TournamentLeaderboardPage() {
               isQualifyingDay) {
             adjustedScore = Math.max(0, score.raw_score - (tournament.birthday_advantage || 0.5));
             player.qualifyingDays++;
+            console.log('Applied birthday advantage:', {
+              rawScore: score.raw_score,
+              advantage: tournament.birthday_advantage,
+              adjustedScore
+            });
           }
           
           player.scores.push({
@@ -221,7 +237,14 @@ export default function TournamentLeaderboardPage() {
           
           if (isToday) {
             player.todayScore = adjustedScore;
+            console.log('Set today score:', adjustedScore);
           }
+          
+          console.log('Player state after processing:', {
+            weekScore: player.weekScore,
+            todayScore: player.todayScore,
+            qualifyingDays: player.qualifyingDays
+          });
         });
         
         // Convert to array and sort
