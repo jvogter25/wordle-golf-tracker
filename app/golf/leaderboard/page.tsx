@@ -74,12 +74,19 @@ export default function LeaderboardPage() {
   const [allTime, setAllTime] = useState<any[]>([]);
   const [monthly, setMonthly] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentMonthName, setCurrentMonthName] = useState('');
   const supabase = createClientComponentClient<Database>();
 
   useEffect(() => {
     const fetchLeaderboards = async () => {
       setLoading(true);
       console.log('Fetching leaderboards...');
+      
+      // Set current month name
+      const now = new Date();
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'];
+      setCurrentMonthName(monthNames[now.getMonth()]);
       
       // Fetch all-time leaderboard
       const { data: allTimeData, error: allTimeError } = await supabase.rpc('get_all_time_leaderboard');
@@ -90,19 +97,57 @@ export default function LeaderboardPage() {
       }
       setAllTime(allTimeData || []);
 
-      // Fetch monthly leaderboard
-      const now = new Date();
+      // Fetch monthly leaderboard with total scores instead of average
       const year = now.getFullYear();
       const month = now.getMonth() + 1;
       console.log(`Fetching monthly leaderboard for ${year}-${month}...`);
       
-      const { data: monthlyData, error: monthlyError } = await supabase.rpc('get_monthly_leaderboard', { year, month });
+      // Get monthly total scores directly from scores table
+      const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
+      const endDate = new Date(year, month, 0).toISOString().split('T')[0]; // Last day of month
+      
+      const { data: monthlyScores, error: monthlyError } = await supabase
+        .from('scores')
+        .select(`
+          user_id,
+          raw_score,
+          profiles (
+            id,
+            display_name
+          )
+        `)
+        .gte('puzzle_date', startDate)
+        .lte('puzzle_date', endDate);
+
       if (monthlyError) {
-        console.error('Error fetching monthly leaderboard:', monthlyError);
+        console.error('Error fetching monthly scores:', monthlyError);
+        setMonthly([]);
       } else {
+        // Group by user and calculate total scores
+        const userTotals = new Map();
+        
+        monthlyScores?.forEach(score => {
+          const userId = score.user_id;
+          const userName = (score.profiles as any)?.display_name || 'Unknown';
+          
+          if (!userTotals.has(userId)) {
+            userTotals.set(userId, {
+              id: userId,
+              display_name: userName,
+              score: 0
+            });
+          }
+          
+          userTotals.get(userId).score += score.raw_score;
+        });
+        
+        // Convert to array and sort by total score
+        const monthlyData = Array.from(userTotals.values())
+          .sort((a, b) => a.score - b.score);
+        
         console.log('Monthly leaderboard data:', monthlyData);
+        setMonthly(monthlyData);
       }
-      setMonthly(monthlyData || []);
       
       setLoading(false);
     };
@@ -152,7 +197,7 @@ export default function LeaderboardPage() {
                       <img src={player.avatar_url || '/golf/jake-avatar.jpg'} alt={player.display_name} className="w-10 h-10 rounded-full border-2 border-[hsl(var(--primary))] mr-2" />
                       <div className="flex flex-col justify-center">
                         <span className={`truncate text-base md:text-lg ${nameClass} mb-0.5`} style={{lineHeight: '1.1'}}>{player.display_name}</span>
-                        <span className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">HCP {player.handicap}</span>
+                        <span className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">HCP {Number(player.handicap).toFixed(1)}</span>
                       </div>
                     </div>
                     <div className="w-16 text-right text-2xl">{scoreToEmoji[player.today]}</div>
@@ -163,7 +208,7 @@ export default function LeaderboardPage() {
           </div>
         </div>
         <div className="mb-8">
-          <h2 className="text-xl font-bold mb-2">Monthly Leaderboard</h2>
+          <h2 className="text-xl font-bold mb-2">Monthly Leaderboard - {currentMonthName}</h2>
           <table className="w-full text-left mb-2 cursor-pointer" onClick={() => window.location.href = '/golf/leaderboard/monthly'}>
             <thead>
               <tr>

@@ -199,12 +199,12 @@ export default function TournamentsPage() {
                 <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block mb-4">
                   <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border-2 border-green-500 hover:shadow-lg transition">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="font-semibold text-lg">{t.name} 
-                        {t.tournament_type === 'birthday' && <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">🎂 Birthday</span>}
-                      </div>
+                      <div className="font-semibold text-lg">{t.name}</div>
                       <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
                     </div>
-                    <div className="text-sm text-[hsl(var(--muted-foreground))]">{t.venue}</div>
+                    <div className="text-sm text-[hsl(var(--muted-foreground))]">
+                      {t.tournament_type === 'birthday' ? '🎂 Birthday' : 'Major'}
+                    </div>
                   </div>
                 </Link>
               ))}
@@ -219,15 +219,15 @@ export default function TournamentsPage() {
                 <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block mb-4">
                   <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border-2 border-yellow-400 hover:shadow-lg transition">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="font-semibold text-lg flex items-center">
-                        🎂 {t.name}
-                      </div>
+                      <div className="font-semibold text-lg">{t.name}</div>
                       <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
+                    </div>
+                    <div className="text-sm text-[hsl(var(--muted-foreground))]">
+                      🎂 Birthday
                     </div>
                     <div className="text-sm text-[hsl(var(--muted-foreground))] bg-yellow-50 px-3 py-2 rounded-lg mt-3">
                       <span className="font-medium text-yellow-800">Birthday Tournament</span> - Special 0.5 stroke advantage for the birthday person!
                     </div>
-                    <div className="text-sm text-[hsl(var(--muted-foreground))] mt-2">{t.venue}</div>
                   </div>
                 </Link>
               ))}
@@ -253,10 +253,11 @@ export default function TournamentsPage() {
                   <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block">
                     <div className="bg-[hsl(var(--card))] rounded-lg shadow p-4 hover:shadow-md transition">
                       <div className="flex items-center justify-between">
-                        <div className="font-medium">{t.name}
-                          {t.tournament_type === 'birthday' && <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">🎂</span>}
-                        </div>
+                        <div className="font-medium">{t.name}</div>
                         <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
+                      </div>
+                      <div className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
+                        {t.tournament_type === 'birthday' ? '🎂 Birthday' : 'Major'}
                       </div>
                     </div>
                   </Link>

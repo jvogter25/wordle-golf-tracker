@@ -66,6 +66,7 @@ export default function TournamentLeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [tournamentName, setTournamentName] = useState('');
   const [tournamentDates, setTournamentDates] = useState('');
+  const [tournamentType, setTournamentType] = useState('');
   const [loading, setLoading] = useState(true);
   const supabase = createClientComponentClient<Database>();
   const params = useParams();
@@ -77,16 +78,20 @@ export default function TournamentLeaderboardPage() {
       // Fetch tournament info
       const { data: tournamentData } = await supabase
         .from('tournaments')
-        .select('name, start_date, end_date')
+        .select('name, start_date, end_date, tournament_type')
         .eq('id', tournamentId)
         .single();
+      
       setTournamentName(tournamentData?.name || 'Tournament');
+      setTournamentType(tournamentData?.tournament_type || '');
+      
       if (tournamentData?.start_date && tournamentData?.end_date) {
         const s = new Date(tournamentData.start_date);
         const e = new Date(tournamentData.end_date);
         const pad = n => n.toString().padStart(2, '0');
         setTournamentDates(`${pad(s.getMonth()+1)}/${pad(s.getDate())} - ${pad(e.getMonth()+1)}/${pad(e.getDate())}`);
       }
+      
       // Fetch leaderboard
       const { data: leaderboardData } = await supabase.rpc('get_tournament_leaderboard', { tournament_id: tournamentId });
       setLeaderboard(leaderboardData || []);
@@ -129,6 +134,21 @@ export default function TournamentLeaderboardPage() {
         </div>
         <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-4 md:p-6 mb-6 border border-[hsl(var(--border))]">
           <h2 className="text-2xl font-bold text-[hsl(var(--foreground))] mb-4">{tournamentName}</h2>
+          
+          {/* Tournament Scoring Info */}
+          {tournamentType === 'birthday' && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center mb-2">
+                <span className="text-2xl mr-2">🎂</span>
+                <h3 className="text-lg font-semibold text-yellow-800">Birthday Tournament Scoring</h3>
+              </div>
+              <div className="text-sm text-yellow-700">
+                <p className="mb-1"><strong>Qualifying Rounds (Mon-Thu):</strong> Birthday person gets -0.5 stroke advantage</p>
+                <p><strong>Championship Rounds (Fri-Sun):</strong> Regular scoring for everyone</p>
+              </div>
+            </div>
+          )}
+          
           <div className="space-y-3">
             {loading ? (
               <div className="text-center py-8">Loading...</div>
@@ -151,22 +171,37 @@ export default function TournamentLeaderboardPage() {
                             className="w-12 h-12 rounded-full border-2 border-[hsl(var(--primary))]" 
                           />
                         </div>
-                        <div className="text-3xl font-bold text-[#6aaa64]">
-                          {player.score}
+                        <div className="text-right">
+                          <div className="text-3xl font-bold text-[#6aaa64]">
+                            {Number(player.score).toFixed(1)}
+                          </div>
+                          {player.is_birthday_person && player.advantage_applied > 0 && (
+                            <div className="text-xs text-yellow-600">
+                              (-{Number(player.advantage_applied).toFixed(1)} advantage)
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className={`text-xl font-bold ${nameClass}`}>
                         {player.display_name}
+                        {player.is_birthday_person && <span className="ml-2 text-lg">🎂</span>}
                       </div>
-                      <div className="text-lg text-[#6aaa64] font-semibold">
+                      <div className="text-lg font-semibold text-[hsl(var(--foreground))]">
                         🎂 Birthday
                       </div>
                       <div className="text-lg font-semibold text-[hsl(var(--foreground))]">
-                        {tournamentName}
+                        Tournament
                       </div>
                       <div className="text-lg font-semibold text-[hsl(var(--foreground))]">
                         Leaderboard
                       </div>
+                      {/* Score breakdown for mobile */}
+                      {(Number(player.qualifying_score) > 0 || Number(player.weekend_score) > 0) && (
+                        <div className="text-sm text-[hsl(var(--muted-foreground))] bg-gray-50 p-2 rounded">
+                          <div>Qualifying: {Number(player.qualifying_score).toFixed(1)}</div>
+                          <div>Weekend: {Number(player.weekend_score).toFixed(1)}</div>
+                        </div>
+                      )}
                     </div>
                     
                     {/* Desktop Layout */}
@@ -178,9 +213,25 @@ export default function TournamentLeaderboardPage() {
                           alt={player.display_name} 
                           className="w-10 h-10 rounded-full border-2 border-[hsl(var(--primary))] mr-3" 
                         />
-                        <span className={`text-lg ${nameClass}`}>{player.display_name}</span>
+                        <span className={`text-lg ${nameClass}`}>
+                          {player.display_name}
+                          {player.is_birthday_person && <span className="ml-2">🎂</span>}
+                        </span>
                       </div>
-                      <div className="w-20 text-right text-xl font-bold">{player.score}</div>
+                      <div className="w-32 text-center text-sm text-[hsl(var(--muted-foreground))]">
+                        Q: {Number(player.qualifying_score).toFixed(1)}
+                      </div>
+                      <div className="w-32 text-center text-sm text-[hsl(var(--muted-foreground))]">
+                        W: {Number(player.weekend_score).toFixed(1)}
+                      </div>
+                      <div className="w-20 text-right">
+                        <div className="text-xl font-bold">{Number(player.score).toFixed(1)}</div>
+                        {player.is_birthday_person && player.advantage_applied > 0 && (
+                          <div className="text-xs text-yellow-600">
+                            (-{Number(player.advantage_applied).toFixed(1)})
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
