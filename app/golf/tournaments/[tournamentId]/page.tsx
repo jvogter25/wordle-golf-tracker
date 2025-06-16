@@ -79,7 +79,6 @@ export default function TournamentLeaderboardPage() {
   const [tournamentType, setTournamentType] = useState('');
   const [tournamentData, setTournamentData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [debugInfo, setDebugInfo] = useState('');
   const supabase = createClientComponentClient<Database>();
   const params = useParams();
   const tournamentId = params?.tournamentId;
@@ -87,7 +86,6 @@ export default function TournamentLeaderboardPage() {
   useEffect(() => {
     const fetchLeaderboard = async () => {
       setLoading(true);
-      setDebugInfo('Fetching tournament data...');
       
       // Fetch tournament info
       const { data: tournament, error: tournamentError } = await supabase
@@ -97,7 +95,6 @@ export default function TournamentLeaderboardPage() {
         .single();
       
       if (tournamentError) {
-        setDebugInfo(`Tournament error: ${tournamentError.message}`);
         setLoading(false);
         return;
       }
@@ -113,13 +110,10 @@ export default function TournamentLeaderboardPage() {
         setTournamentDates(`${pad(s.getMonth()+1)}/${pad(s.getDate())} - ${pad(e.getMonth()+1)}/${pad(e.getDate())}`);
       }
       
-      setDebugInfo('Fetching leaderboard data...');
-      
       // Try the SQL function first
       const { data: leaderboardData, error: leaderboardError } = await supabase.rpc('get_tournament_leaderboard', { tournament_id: tournamentId });
       
       if (leaderboardError) {
-        setDebugInfo(`SQL function error: ${leaderboardError.message}. Trying fallback method...`);
         
         // Fallback: Query scores directly
         const { data: scoresData, error: scoresError } = await supabase
@@ -136,7 +130,6 @@ export default function TournamentLeaderboardPage() {
           .lte('puzzle_date', tournament.end_date);
         
         if (scoresError) {
-          setDebugInfo(`Scores error: ${scoresError.message}`);
           setLoading(false);
           return;
         }
@@ -157,6 +150,7 @@ export default function TournamentLeaderboardPage() {
               totalScore: 0,
               todayScore: null,
               weekScore: 0,
+              qualifyingDays: 0,
               is_birthday_person: tournament.birthday_user_id === userId
             });
           }
@@ -166,14 +160,19 @@ export default function TournamentLeaderboardPage() {
           const today = new Date();
           const isToday = scoreDate.toDateString() === today.toDateString();
           
-          // Apply birthday advantage for qualifying rounds (Mon-Thu)
+          // Check if this is a qualifying round (Mon-Thu)
           const dayOfWeek = scoreDate.getDay(); // 0=Sunday, 1=Monday, etc.
+          const isQualifyingDay = [1,2,3,4].includes(dayOfWeek); // Mon-Thu
+          
+          // Use raw score for individual day scoring
           let adjustedScore = score.raw_score;
           
+          // For birthday person on qualifying days, apply advantage to individual score
           if (tournament.tournament_type === 'birthday' && 
               tournament.birthday_user_id === userId && 
-              [1,2,3,4].includes(dayOfWeek)) { // Mon-Thu
+              isQualifyingDay) {
             adjustedScore = Math.max(0, score.raw_score - (tournament.birthday_advantage || 0.5));
+            player.qualifyingDays++;
           }
           
           player.scores.push({
@@ -196,10 +195,8 @@ export default function TournamentLeaderboardPage() {
           .sort((a, b) => a.weekScore - b.weekScore);
         
         setLeaderboard(leaderboardArray);
-        setDebugInfo(`Fallback successful. Found ${leaderboardArray.length} players.`);
       } else {
         setLeaderboard(leaderboardData || []);
-        setDebugInfo(`SQL function successful. Found ${leaderboardData?.length || 0} players.`);
       }
       
       setLoading(false);
@@ -252,13 +249,6 @@ export default function TournamentLeaderboardPage() {
               <p className="mb-1"><strong>Qualifying Rounds (Mon-Thu):</strong> Birthday person gets -0.5 stroke advantage</p>
               <p><strong>Championship Rounds (Fri-Sun):</strong> Regular scoring for everyone</p>
             </div>
-          </div>
-        )}
-
-        {/* Debug Info */}
-        {debugInfo && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-700">
-            Debug: {debugInfo}
           </div>
         )}
 
