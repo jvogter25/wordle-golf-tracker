@@ -62,6 +62,16 @@ function WordleHeader({ label }: { label: string }) {
   );
 }
 
+// Function to convert raw score to golf scoring
+function formatGolfScore(score: number): string {
+  const par = 4; // Assuming par 4 for Wordle (4 attempts is par)
+  const difference = score - par;
+  
+  if (difference === 0) return 'E';
+  if (difference > 0) return `+${difference}`;
+  return `${difference}`;
+}
+
 export default function TournamentLeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [tournamentName, setTournamentName] = useState('');
@@ -254,8 +264,6 @@ export default function TournamentLeaderboardPage() {
 
         {/* Tournament Leaderboard */}
         <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-4 md:p-6 mb-6 border border-[hsl(var(--border))]">
-          <h2 className="text-2xl font-bold text-[hsl(var(--foreground))] mb-4">{tournamentName}</h2>
-          
           {loading ? (
             <div className="text-center py-8">Loading...</div>
           ) : leaderboard.length === 0 ? (
@@ -286,28 +294,22 @@ export default function TournamentLeaderboardPage() {
                           <div className="w-10 h-10 bg-[#6aaa64] rounded-full flex items-center justify-center text-white font-bold text-lg">
                             {pos}
                           </div>
+                          <div className={`text-xl font-bold ${nameClass}`}>
+                            {player.display_name}
+                            {player.is_birthday_person && <span className="ml-2 text-lg">🎂</span>}
+                          </div>
+                        </div>
+                        <div>
                           <img 
                             src={player.avatar_url || '/golf/jake-avatar.jpg'} 
                             alt={player.display_name} 
                             className="w-12 h-12 rounded-full border-2 border-[hsl(var(--primary))]" 
                           />
                         </div>
-                        <div className="text-right">
-                          <div className="text-3xl font-bold text-[#6aaa64]">
-                            {player.weekScore || player.score || 0}
-                          </div>
-                          {player.is_birthday_person && (
-                            <div className="text-xs text-yellow-600">🎂 Birthday Advantage</div>
-                          )}
-                        </div>
-                      </div>
-                      <div className={`text-xl font-bold ${nameClass}`}>
-                        {player.display_name}
-                        {player.is_birthday_person && <span className="ml-2 text-lg">🎂</span>}
                       </div>
                       <div className="text-sm text-[hsl(var(--muted-foreground))] bg-gray-50 p-2 rounded">
-                        <div>Today: {player.todayScore !== null ? player.todayScore : '-'}</div>
-                        <div>This Week: {player.weekScore || player.score || 0}</div>
+                        <div>Today: {player.todayScore !== null ? formatGolfScore(player.todayScore) : '-'}</div>
+                        <div>This Week: {formatGolfScore(player.weekScore || player.score || 0)}</div>
                       </div>
                     </div>
                     
@@ -326,10 +328,10 @@ export default function TournamentLeaderboardPage() {
                         </span>
                       </div>
                       <div className="w-20 text-center text-lg font-semibold">
-                        {player.todayScore !== null ? player.todayScore : '-'}
+                        {player.todayScore !== null ? formatGolfScore(player.todayScore) : '-'}
                       </div>
                       <div className="w-24 text-center text-xl font-bold">
-                        {player.weekScore || player.score || 0}
+                        {formatGolfScore(player.weekScore || player.score || 0)}
                       </div>
                     </div>
                   </div>

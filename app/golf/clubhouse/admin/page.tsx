@@ -11,7 +11,6 @@ export default function ClubhouseAdminPage() {
   const [newEmail, setNewEmail] = useState("");
   const [selectedGroup, setSelectedGroup] = useState("");
   const [newGroupCode, setNewGroupCode] = useState("");
-  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [newScore, setNewScore] = useState("");
@@ -85,7 +84,6 @@ export default function ClubhouseAdminPage() {
 
     toast.success('Group code updated successfully!');
     setNewGroupCode("");
-    setEditingGroupId(null);
     
     // Refresh groups data
     const { data: groupsData } = await supabase.from('groups').select('*');
@@ -167,7 +165,7 @@ export default function ClubhouseAdminPage() {
         <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-6 border border-[hsl(var(--border))] mb-8">
           <h2 className="text-lg font-semibold mb-4">Create Group Code</h2>
           
-          {groups.length > 0 && (
+          {groups.length > 0 ? (
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Select Group</label>
@@ -223,6 +221,10 @@ export default function ClubhouseAdminPage() {
                   Users can join your group using this code
                 </p>
               </div>
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <p className="text-[hsl(var(--muted-foreground))]">No groups found. Create a group first.</p>
             </div>
           )}
         </div>
