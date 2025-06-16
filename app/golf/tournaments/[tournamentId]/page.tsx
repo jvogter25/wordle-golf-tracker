@@ -282,6 +282,43 @@ export default function TournamentLeaderboardPage() {
           });
         });
         
+        // Apply birthday tournament starting advantage
+        if (tournament.tournament_type === 'birthday') {
+          const today = new Date();
+          const dayOfWeek = today.getDay(); // 0=Sunday, 1=Monday, etc.
+          const isWeekend = [5, 6, 0].includes(dayOfWeek); // Fri, Sat, Sun
+          
+          // If it's the weekend, birthday person should have full qualifying advantage
+          // even if they haven't submitted scores for all qualifying days
+          if (isWeekend) {
+            playerScores.forEach((player, userId) => {
+              if (tournament.birthday_user_id === userId) {
+                // Calculate how many qualifying days they actually played
+                const qualifyingScoresSubmitted = player.scores.filter(score => {
+                  const scoreDate = new Date(score.date);
+                  const scoreDayOfWeek = scoreDate.getDay();
+                  return [1,2,3,4].includes(scoreDayOfWeek); // Mon-Thu
+                }).length;
+                
+                // They should get advantage for all 4 qualifying days, regardless of submission
+                const fullQualifyingAdvantage = (tournament.birthday_advantage || 0.5) * 4;
+                const alreadyAppliedAdvantage = (tournament.birthday_advantage || 0.5) * qualifyingScoresSubmitted;
+                const additionalAdvantage = fullQualifyingAdvantage - alreadyAppliedAdvantage;
+                
+                player.weekScore -= additionalAdvantage;
+                console.log('Applied weekend birthday advantage:', {
+                  userId,
+                  qualifyingScoresSubmitted,
+                  fullQualifyingAdvantage,
+                  alreadyAppliedAdvantage,
+                  additionalAdvantage,
+                  newWeekScore: player.weekScore
+                });
+              }
+            });
+          }
+        }
+
         // Convert to array and sort
         const leaderboardArray = Array.from(playerScores.values())
           .filter(player => player.scores.length > 0)

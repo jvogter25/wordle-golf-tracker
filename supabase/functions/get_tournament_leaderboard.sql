@@ -24,16 +24,28 @@ BEGIN
           (SELECT 
             SUM(CASE 
               WHEN EXTRACT(DOW FROM s.puzzle_date) IN (1,2,3,4) THEN -- Mon-Thu
-                GREATEST(0, s.raw_score - t.birthday_advantage)
+                GREATEST(0, s.attempts - t.birthday_advantage)
               ELSE -- Fri-Sun
-                s.raw_score
+                s.attempts
             END)
            FROM scores s 
            WHERE s.user_id = p.id 
-           AND s.puzzle_date BETWEEN t.start_date AND t.end_date)
+           AND s.puzzle_date BETWEEN t.start_date AND t.end_date) +
+          -- Add remaining qualifying advantage if it's weekend (Fri-Sun)
+          CASE 
+            WHEN EXTRACT(DOW FROM CURRENT_DATE) IN (5,6,0) THEN -- Fri-Sun
+              -- Give full 4-day advantage minus what was already applied
+              -(t.birthday_advantage * 4) + 
+              (t.birthday_advantage * (SELECT COUNT(*)
+                                      FROM scores s2 
+                                      WHERE s2.user_id = p.id 
+                                      AND s2.puzzle_date BETWEEN t.start_date AND t.end_date
+                                      AND EXTRACT(DOW FROM s2.puzzle_date) IN (1,2,3,4)))
+            ELSE 0
+          END
         ELSE
           -- Regular scoring for everyone else
-          (SELECT SUM(s.raw_score)
+          (SELECT SUM(s.attempts)
            FROM scores s 
            WHERE s.user_id = p.id 
            AND s.puzzle_date BETWEEN t.start_date AND t.end_date)
@@ -44,14 +56,14 @@ BEGIN
       CASE 
         WHEN t.tournament_type = 'birthday' AND t.birthday_user_id = p.id THEN
           -- Birthday person gets advantage during qualifying
-          (SELECT SUM(GREATEST(0, s.raw_score - t.birthday_advantage))
+          (SELECT SUM(GREATEST(0, s.attempts - t.birthday_advantage))
            FROM scores s 
            WHERE s.user_id = p.id 
            AND s.puzzle_date BETWEEN t.start_date AND t.end_date
            AND EXTRACT(DOW FROM s.puzzle_date) IN (1,2,3,4)) -- Mon-Thu
         ELSE
           -- Regular qualifying scoring
-          (SELECT SUM(s.raw_score)
+          (SELECT SUM(s.attempts)
            FROM scores s 
            WHERE s.user_id = p.id 
            AND s.puzzle_date BETWEEN t.start_date AND t.end_date
@@ -60,7 +72,7 @@ BEGIN
     ) as qualifying_score,
     -- Weekend score (Friday-Sunday, no advantages for anyone)
     COALESCE(
-      (SELECT SUM(s.raw_score)
+      (SELECT SUM(s.attempts)
        FROM scores s 
        WHERE s.user_id = p.id 
        AND s.puzzle_date BETWEEN t.start_date AND t.end_date

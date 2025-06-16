@@ -5,6 +5,8 @@ import { Database } from '@/types/supabase';
 import { toast } from 'sonner';
 
 export default function ClubhouseAdminPage() {
+  console.log('🚀 Admin page component loaded!');
+  
   const [members, setMembers] = useState<any[]>([]);
   const [scores, setScores] = useState<any[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
@@ -17,6 +19,13 @@ export default function ClubhouseAdminPage() {
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState<string[]>([]);
   const supabase = createClientComponentClient<Database>();
+
+  console.log('🔧 Admin page state:', { 
+    loading, 
+    groupsLength: groups.length, 
+    membersLength: members.length,
+    errorsLength: errors.length 
+  });
 
   useEffect(() => {
     const fetchData = async () => {
