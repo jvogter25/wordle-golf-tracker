@@ -4,9 +4,14 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Database } from '@/types/supabase';
 import { toast } from 'sonner';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default function ClubhouseAdminPage() {
   console.log('🚀🚀🚀 ADMIN PAGE COMPONENT LOADED - NEW VERSION! 🚀🚀🚀');
   console.log('🔥 TESTING IF NEW CODE IS RUNNING 🔥');
+  console.log('⏰ TIMESTAMP:', new Date().toISOString());
   
   const [members, setMembers] = useState<any[]>([]);
   const [scores, setScores] = useState<any[]>([]);
@@ -216,6 +221,8 @@ export default function ClubhouseAdminPage() {
         {/* TESTING INDICATOR */}
         <div className="bg-red-500 text-white p-4 rounded-lg mb-4 text-center font-bold">
           🔥 NEW CODE VERSION LOADED - TESTING 🔥
+          <br />
+          ⏰ {new Date().toLocaleTimeString()}
         </div>
         
         {/* Loading State */}
