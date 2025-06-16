@@ -18,20 +18,35 @@ export default function ClubhouseAdminPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      // Fetch group members from profiles table
-      const { data: membersData } = await supabase.from('profiles').select('*');
-      setMembers(membersData || []);
+      console.log('Admin page: Starting data fetch...');
       
-      // Fetch scores
-      const { data: scoresData } = await supabase.from('scores').select('*').order('puzzle_date', { ascending: false });
-      setScores(scoresData || []);
-      
-      // Fetch groups
-      const { data: groupsData } = await supabase.from('groups').select('*');
-      setGroups(groupsData || []);
-      
-      if (groupsData && groupsData.length > 0) {
-        setSelectedGroup(groupsData[0].id);
+      try {
+        // Fetch group members from profiles table
+        console.log('Fetching profiles...');
+        const { data: membersData, error: membersError } = await supabase.from('profiles').select('*');
+        console.log('Profiles result:', { data: membersData, error: membersError });
+        setMembers(membersData || []);
+        
+        // Fetch scores
+        console.log('Fetching scores...');
+        const { data: scoresData, error: scoresError } = await supabase.from('scores').select('*').order('puzzle_date', { ascending: false });
+        console.log('Scores result:', { data: scoresData?.length, error: scoresError });
+        setScores(scoresData || []);
+        
+        // Fetch groups
+        console.log('Fetching groups...');
+        const { data: groupsData, error: groupsError } = await supabase.from('groups').select('*');
+        console.log('Groups result:', { data: groupsData, error: groupsError });
+        setGroups(groupsData || []);
+        
+        if (groupsData && groupsData.length > 0) {
+          setSelectedGroup(groupsData[0].id);
+          console.log('Selected first group:', groupsData[0].id);
+        } else {
+          console.log('No groups found');
+        }
+      } catch (error) {
+        console.error('Error in fetchData:', error);
       }
     };
     fetchData();

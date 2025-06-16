@@ -134,6 +134,23 @@ export default function TournamentLeaderboardPage() {
           return;
         }
         
+        // Debug: Let's also check what scores exist for this user regardless of date
+        const { data: allUserScores } = await supabase
+          .from('scores')
+          .select(`
+            *,
+            profiles (
+              id,
+              display_name,
+              avatar_url
+            )
+          `)
+          .eq('user_id', tournament.birthday_user_id);
+        
+        console.log('All user scores:', allUserScores);
+        console.log('Tournament dates:', tournament.start_date, 'to', tournament.end_date);
+        console.log('Filtered scores:', scoresData);
+        
         // Process scores manually
         const playerScores = new Map();
         
@@ -196,7 +213,18 @@ export default function TournamentLeaderboardPage() {
         
         setLeaderboard(leaderboardArray);
       } else {
-        setLeaderboard(leaderboardData || []);
+        // Use SQL function results but map them to our expected format
+        const mappedLeaderboard = leaderboardData?.map(player => ({
+          id: player.id,
+          display_name: player.display_name,
+          avatar_url: player.avatar_url,
+          weekScore: player.score || 0,
+          todayScore: null, // SQL function doesn't provide today's score
+          is_birthday_person: player.is_birthday_person || false,
+          scores: [] // SQL function doesn't provide individual scores
+        })) || [];
+        
+        setLeaderboard(mappedLeaderboard);
       }
       
       setLoading(false);
