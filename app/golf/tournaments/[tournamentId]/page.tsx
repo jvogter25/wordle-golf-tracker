@@ -252,6 +252,29 @@ export default function TournamentLeaderboardPage() {
           </div>
         )}
 
+        {/* Debug Info */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-700">
+          <div>Tournament ID: {tournamentId}</div>
+          <div>Tournament Type: {tournamentType}</div>
+          <div>Birthday User ID: {tournamentData?.birthday_user_id}</div>
+          <div>Leaderboard Length: {leaderboard.length}</div>
+          {leaderboard.length > 0 && (
+            <div>
+              <div>First Player: {leaderboard[0]?.display_name}</div>
+              <div>Today Score: {leaderboard[0]?.todayScore}</div>
+              <div>Week Score: {leaderboard[0]?.weekScore}</div>
+              <div>Qualifying Days: {leaderboard[0]?.qualifyingDays}</div>
+              <div>Is Birthday Person: {leaderboard[0]?.is_birthday_person ? 'Yes' : 'No'}</div>
+              <div>Scores: {JSON.stringify(leaderboard[0]?.scores?.map(s => ({
+                date: s.date,
+                raw: s.rawScore,
+                adjusted: s.adjustedScore,
+                isToday: s.isToday
+              })))}</div>
+            </div>
+          )}
+        </div>
+
         {/* Tournament Leaderboard */}
         <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-4 md:p-6 mb-6 border border-[hsl(var(--border))]">
           {loading ? (

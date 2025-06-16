@@ -132,6 +132,15 @@ export default function ClubhouseAdminPage() {
       <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold mb-6">Admin Center</h1>
         
+        {/* Debug Info */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-700">
+          <div>Groups Length: {groups.length}</div>
+          <div>Groups Data: {JSON.stringify(groups)}</div>
+          <div>Selected Group: {selectedGroup}</div>
+          <div>Selected Group Data: {JSON.stringify(selectedGroupData)}</div>
+          <div>Members Length: {members.length}</div>
+        </div>
+        
         {/* Group Members Section */}
         <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-6 border border-[hsl(var(--border))] mb-8">
           <h2 className="text-lg font-semibold mb-4">Group Members</h2>
