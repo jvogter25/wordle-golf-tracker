@@ -9,8 +9,8 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default function ClubhouseAdminPage() {
-  console.log('🚀🚀🚀 ADMIN PAGE COMPONENT LOADED - NEW VERSION! 🚀🚀🚀');
-  console.log('🔥 TESTING IF NEW CODE IS RUNNING 🔥');
+  console.log('🚀🚀🚀 ADMIN PAGE v2.0 - ENHANCED GROUPS FETCHING! 🚀🚀🚀');
+  console.log('🔥 CACHE BUSTER:', Math.random());
   console.log('⏰ TIMESTAMP:', new Date().toISOString());
   
   const [members, setMembers] = useState<any[]>([]);
@@ -330,9 +330,16 @@ export default function ClubhouseAdminPage() {
         
         {/* TESTING INDICATOR */}
         <div className="bg-red-500 text-white p-4 rounded-lg mb-4 text-center font-bold">
-          🔥 NEW CODE VERSION LOADED - TESTING 🔥
+          🔥 ENHANCED GROUPS FETCHING - v2.0 🔥
           <br />
           ⏰ {new Date().toLocaleTimeString()}
+          <br />
+          <button 
+            onClick={() => window.location.reload()} 
+            className="bg-white text-red-500 px-3 py-1 rounded mt-2 text-sm font-normal"
+          >
+            🔄 Force Refresh
+          </button>
         </div>
         
         {/* Loading State */}
@@ -395,7 +402,15 @@ export default function ClubhouseAdminPage() {
 
         {/* Create Group Code Section */}
         <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-6 border border-[hsl(var(--border))] mb-8">
-          <h2 className="text-lg font-semibold mb-4">Create Group Code</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold">Create Group Code</h2>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
+            >
+              🔄 Refresh Groups
+            </button>
+          </div>
           
           {groups.length > 0 ? (
             <div className="space-y-4">
