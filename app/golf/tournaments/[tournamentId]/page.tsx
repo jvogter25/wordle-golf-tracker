@@ -67,7 +67,9 @@ export default function TournamentLeaderboardPage() {
   const [tournamentName, setTournamentName] = useState('');
   const [tournamentDates, setTournamentDates] = useState('');
   const [tournamentType, setTournamentType] = useState('');
+  const [tournamentData, setTournamentData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [debugInfo, setDebugInfo] = useState('');
   const supabase = createClientComponentClient<Database>();
   const params = useParams();
   const tournamentId = params?.tournamentId;
@@ -75,28 +77,124 @@ export default function TournamentLeaderboardPage() {
   useEffect(() => {
     const fetchLeaderboard = async () => {
       setLoading(true);
+      setDebugInfo('Fetching tournament data...');
+      
       // Fetch tournament info
-      const { data: tournamentData } = await supabase
+      const { data: tournament, error: tournamentError } = await supabase
         .from('tournaments')
-        .select('name, start_date, end_date, tournament_type')
+        .select('*')
         .eq('id', tournamentId)
         .single();
       
-      setTournamentName(tournamentData?.name || 'Tournament');
-      setTournamentType(tournamentData?.tournament_type || '');
+      if (tournamentError) {
+        setDebugInfo(`Tournament error: ${tournamentError.message}`);
+        setLoading(false);
+        return;
+      }
       
-      if (tournamentData?.start_date && tournamentData?.end_date) {
-        const s = new Date(tournamentData.start_date);
-        const e = new Date(tournamentData.end_date);
+      setTournamentData(tournament);
+      setTournamentName(tournament?.name || 'Tournament');
+      setTournamentType(tournament?.tournament_type || '');
+      
+      if (tournament?.start_date && tournament?.end_date) {
+        const s = new Date(tournament.start_date);
+        const e = new Date(tournament.end_date);
         const pad = n => n.toString().padStart(2, '0');
         setTournamentDates(`${pad(s.getMonth()+1)}/${pad(s.getDate())} - ${pad(e.getMonth()+1)}/${pad(e.getDate())}`);
       }
       
-      // Fetch leaderboard
-      const { data: leaderboardData } = await supabase.rpc('get_tournament_leaderboard', { tournament_id: tournamentId });
-      setLeaderboard(leaderboardData || []);
+      setDebugInfo('Fetching leaderboard data...');
+      
+      // Try the SQL function first
+      const { data: leaderboardData, error: leaderboardError } = await supabase.rpc('get_tournament_leaderboard', { tournament_id: tournamentId });
+      
+      if (leaderboardError) {
+        setDebugInfo(`SQL function error: ${leaderboardError.message}. Trying fallback method...`);
+        
+        // Fallback: Query scores directly
+        const { data: scoresData, error: scoresError } = await supabase
+          .from('scores')
+          .select(`
+            *,
+            profiles (
+              id,
+              display_name,
+              avatar_url
+            )
+          `)
+          .gte('puzzle_date', tournament.start_date)
+          .lte('puzzle_date', tournament.end_date);
+        
+        if (scoresError) {
+          setDebugInfo(`Scores error: ${scoresError.message}`);
+          setLoading(false);
+          return;
+        }
+        
+        // Process scores manually
+        const playerScores = new Map();
+        
+        scoresData?.forEach(score => {
+          const userId = score.user_id;
+          const profile = (score.profiles as any);
+          
+          if (!playerScores.has(userId)) {
+            playerScores.set(userId, {
+              id: userId,
+              display_name: profile?.display_name || 'Unknown',
+              avatar_url: profile?.avatar_url || null,
+              scores: [],
+              totalScore: 0,
+              todayScore: null,
+              weekScore: 0,
+              is_birthday_person: tournament.birthday_user_id === userId
+            });
+          }
+          
+          const player = playerScores.get(userId);
+          const scoreDate = new Date(score.puzzle_date);
+          const today = new Date();
+          const isToday = scoreDate.toDateString() === today.toDateString();
+          
+          // Apply birthday advantage for qualifying rounds (Mon-Thu)
+          const dayOfWeek = scoreDate.getDay(); // 0=Sunday, 1=Monday, etc.
+          let adjustedScore = score.raw_score;
+          
+          if (tournament.tournament_type === 'birthday' && 
+              tournament.birthday_user_id === userId && 
+              [1,2,3,4].includes(dayOfWeek)) { // Mon-Thu
+            adjustedScore = Math.max(0, score.raw_score - (tournament.birthday_advantage || 0.5));
+          }
+          
+          player.scores.push({
+            date: score.puzzle_date,
+            rawScore: score.raw_score,
+            adjustedScore: adjustedScore,
+            isToday: isToday
+          });
+          
+          player.weekScore += adjustedScore;
+          
+          if (isToday) {
+            player.todayScore = adjustedScore;
+          }
+        });
+        
+        // Convert to array and sort
+        const leaderboardArray = Array.from(playerScores.values())
+          .filter(player => player.scores.length > 0)
+          .sort((a, b) => a.weekScore - b.weekScore);
+        
+        setLeaderboard(leaderboardArray);
+        setDebugInfo(`Fallback successful. Found ${leaderboardArray.length} players.`);
+      } else {
+        setLeaderboard(leaderboardData || []);
+        setDebugInfo(`SQL function successful. Found ${leaderboardData?.length || 0} players.`);
+      }
+      
       setLoading(false);
     };
+    
     if (tournamentId) fetchLeaderboard();
   }, [supabase, tournamentId]);
 
@@ -132,30 +230,53 @@ export default function TournamentLeaderboardPage() {
             </div>
           )}
         </div>
+        
+        {/* Tournament Scoring Info */}
+        {tournamentType === 'birthday' && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center mb-2">
+              <span className="text-2xl mr-2">🎂</span>
+              <h3 className="text-lg font-semibold text-yellow-800">Birthday Tournament Scoring</h3>
+            </div>
+            <div className="text-sm text-yellow-700">
+              <p className="mb-1"><strong>Qualifying Rounds (Mon-Thu):</strong> Birthday person gets -0.5 stroke advantage</p>
+              <p><strong>Championship Rounds (Fri-Sun):</strong> Regular scoring for everyone</p>
+            </div>
+          </div>
+        )}
+
+        {/* Debug Info */}
+        {debugInfo && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-700">
+            Debug: {debugInfo}
+          </div>
+        )}
+
+        {/* Tournament Leaderboard */}
         <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-4 md:p-6 mb-6 border border-[hsl(var(--border))]">
           <h2 className="text-2xl font-bold text-[hsl(var(--foreground))] mb-4">{tournamentName}</h2>
           
-          {/* Tournament Scoring Info */}
-          {tournamentType === 'birthday' && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-              <div className="flex items-center mb-2">
-                <span className="text-2xl mr-2">🎂</span>
-                <h3 className="text-lg font-semibold text-yellow-800">Birthday Tournament Scoring</h3>
-              </div>
-              <div className="text-sm text-yellow-700">
-                <p className="mb-1"><strong>Qualifying Rounds (Mon-Thu):</strong> Birthday person gets -0.5 stroke advantage</p>
-                <p><strong>Championship Rounds (Fri-Sun):</strong> Regular scoring for everyone</p>
-              </div>
+          {loading ? (
+            <div className="text-center py-8">Loading...</div>
+          ) : leaderboard.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-[hsl(var(--muted-foreground))]">No scores submitted yet for this tournament.</p>
+              <p className="text-sm text-[hsl(var(--muted-foreground))] mt-2">Submit your daily Wordle score to appear on the leaderboard!</p>
             </div>
-          )}
-          
-          <div className="space-y-3">
-            {loading ? (
-              <div className="text-center py-8">Loading...</div>
-            ) : (
-              leaderboard.map((player, idx) => {
-                let pos: string = String(idx + 1);
+          ) : (
+            <div className="space-y-3">
+              {/* Desktop Header */}
+              <div className="hidden md:flex items-center bg-[hsl(var(--muted))] rounded-lg p-3 font-semibold text-sm">
+                <div className="w-12">Pos</div>
+                <div className="flex-1 pl-4">Name</div>
+                <div className="w-20 text-center">Today</div>
+                <div className="w-24 text-center">This Week</div>
+              </div>
+              
+              {leaderboard.map((player, idx) => {
+                const pos = idx + 1;
                 const nameClass = idx < 3 ? 'text-[#6aaa64] font-semibold' : 'text-[hsl(var(--foreground))]';
+                
                 return (
                   <div key={player.id} className="bg-[hsl(var(--muted))] rounded-xl p-4 shadow-sm">
                     {/* Mobile Layout */}
@@ -173,12 +294,10 @@ export default function TournamentLeaderboardPage() {
                         </div>
                         <div className="text-right">
                           <div className="text-3xl font-bold text-[#6aaa64]">
-                            {Number(player.score).toFixed(1)}
+                            {player.weekScore || player.score || 0}
                           </div>
-                          {player.is_birthday_person && player.advantage_applied > 0 && (
-                            <div className="text-xs text-yellow-600">
-                              (-{Number(player.advantage_applied).toFixed(1)} advantage)
-                            </div>
+                          {player.is_birthday_person && (
+                            <div className="text-xs text-yellow-600">🎂 Birthday Advantage</div>
                           )}
                         </div>
                       </div>
@@ -186,22 +305,10 @@ export default function TournamentLeaderboardPage() {
                         {player.display_name}
                         {player.is_birthday_person && <span className="ml-2 text-lg">🎂</span>}
                       </div>
-                      <div className="text-lg font-semibold text-[hsl(var(--foreground))]">
-                        🎂 Birthday
+                      <div className="text-sm text-[hsl(var(--muted-foreground))] bg-gray-50 p-2 rounded">
+                        <div>Today: {player.todayScore !== null ? player.todayScore : '-'}</div>
+                        <div>This Week: {player.weekScore || player.score || 0}</div>
                       </div>
-                      <div className="text-lg font-semibold text-[hsl(var(--foreground))]">
-                        Tournament
-                      </div>
-                      <div className="text-lg font-semibold text-[hsl(var(--foreground))]">
-                        Leaderboard
-                      </div>
-                      {/* Score breakdown for mobile */}
-                      {(Number(player.qualifying_score) > 0 || Number(player.weekend_score) > 0) && (
-                        <div className="text-sm text-[hsl(var(--muted-foreground))] bg-gray-50 p-2 rounded">
-                          <div>Qualifying: {Number(player.qualifying_score).toFixed(1)}</div>
-                          <div>Weekend: {Number(player.weekend_score).toFixed(1)}</div>
-                        </div>
-                      )}
                     </div>
                     
                     {/* Desktop Layout */}
@@ -218,26 +325,18 @@ export default function TournamentLeaderboardPage() {
                           {player.is_birthday_person && <span className="ml-2">🎂</span>}
                         </span>
                       </div>
-                      <div className="w-32 text-center text-sm text-[hsl(var(--muted-foreground))]">
-                        Q: {Number(player.qualifying_score).toFixed(1)}
+                      <div className="w-20 text-center text-lg font-semibold">
+                        {player.todayScore !== null ? player.todayScore : '-'}
                       </div>
-                      <div className="w-32 text-center text-sm text-[hsl(var(--muted-foreground))]">
-                        W: {Number(player.weekend_score).toFixed(1)}
-                      </div>
-                      <div className="w-20 text-right">
-                        <div className="text-xl font-bold">{Number(player.score).toFixed(1)}</div>
-                        {player.is_birthday_person && player.advantage_applied > 0 && (
-                          <div className="text-xs text-yellow-600">
-                            (-{Number(player.advantage_applied).toFixed(1)})
-                          </div>
-                        )}
+                      <div className="w-24 text-center text-xl font-bold">
+                        {player.weekScore || player.score || 0}
                       </div>
                     </div>
                   </div>
                 );
-              })
-            )}
-          </div>
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

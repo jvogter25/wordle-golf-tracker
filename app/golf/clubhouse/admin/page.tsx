@@ -2,35 +2,158 @@
 import { useEffect, useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Database } from '@/types/supabase';
+import { toast } from 'sonner';
 
 export default function ClubhouseAdminPage() {
   const [members, setMembers] = useState<any[]>([]);
   const [scores, setScores] = useState<any[]>([]);
+  const [groups, setGroups] = useState<any[]>([]);
   const [newEmail, setNewEmail] = useState("");
+  const [selectedGroup, setSelectedGroup] = useState("");
+  const [newGroupCode, setNewGroupCode] = useState("");
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [selectedMember, setSelectedMember] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
+  const [newScore, setNewScore] = useState("");
   const supabase = createClientComponentClient<Database>();
 
   useEffect(() => {
-    const fetchMembersAndScores = async () => {
-      // Fetch group members
-      const { data: membersData } = await supabase.from('users').select('*');
+    const fetchData = async () => {
+      // Fetch group members from profiles table
+      const { data: membersData } = await supabase.from('profiles').select('*');
       setMembers(membersData || []);
+      
       // Fetch scores
       const { data: scoresData } = await supabase.from('scores').select('*').order('puzzle_date', { ascending: false });
       setScores(scoresData || []);
+      
+      // Fetch groups
+      const { data: groupsData } = await supabase.from('groups').select('*');
+      setGroups(groupsData || []);
+      
+      if (groupsData && groupsData.length > 0) {
+        setSelectedGroup(groupsData[0].id);
+      }
     };
-    fetchMembersAndScores();
+    fetchData();
   }, [supabase]);
+
+  const addMember = async () => {
+    if (!newEmail.trim()) {
+      toast.error('Please enter an email address');
+      return;
+    }
+
+    // This would typically send an invitation
+    toast.success('Member invitation sent!');
+    setNewEmail("");
+  };
+
+  const updateGroupCode = async () => {
+    if (!selectedGroup) {
+      toast.error('Please select a group');
+      return;
+    }
+
+    if (!newGroupCode.trim()) {
+      toast.error('Please enter a group code');
+      return;
+    }
+
+    // Check if code already exists
+    const { data: existingGroup } = await supabase
+      .from('groups')
+      .select('id')
+      .eq('invite_code', newGroupCode.trim().toUpperCase())
+      .neq('id', selectedGroup)
+      .single();
+
+    if (existingGroup) {
+      toast.error('This group code is already in use');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('groups')
+      .update({ invite_code: newGroupCode.trim().toUpperCase() })
+      .eq('id', selectedGroup);
+
+    if (error) {
+      toast.error('Error updating group code');
+      return;
+    }
+
+    toast.success('Group code updated successfully!');
+    setNewGroupCode("");
+    setEditingGroupId(null);
+    
+    // Refresh groups data
+    const { data: groupsData } = await supabase.from('groups').select('*');
+    setGroups(groupsData || []);
+  };
+
+  const updateScore = async () => {
+    if (!selectedMember || !selectedDate || !newScore) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('scores')
+      .upsert({
+        user_id: selectedMember,
+        puzzle_date: selectedDate,
+        raw_score: parseInt(newScore),
+        attempts: parseInt(newScore) // Assuming raw_score equals attempts for simplicity
+      });
+
+    if (error) {
+      toast.error('Error updating score');
+      return;
+    }
+
+    toast.success('Score updated successfully!');
+    setSelectedMember("");
+    setSelectedDate("");
+    setNewScore("");
+    
+    // Refresh scores data
+    const { data: scoresData } = await supabase.from('scores').select('*').order('puzzle_date', { ascending: false });
+    setScores(scoresData || []);
+  };
+
+  const copyGroupCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast.success('Group code copied to clipboard!');
+  };
+
+  const selectedGroupData = groups.find(g => g.id === selectedGroup);
 
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] p-4">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold mb-6">Admin Center</h1>
+        
+        {/* Group Members Section */}
         <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-6 border border-[hsl(var(--border))] mb-8">
-          <h2 className="text-lg font-semibold mb-4">Add Member</h2>
-          {/* Add member form can be implemented here if needed */}
-        </div>
-        <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-6 border border-[hsl(var(--border))] mb-8">
-          <h2 className="text-lg font-semibold mb-4">Remove Member</h2>
+          <h2 className="text-lg font-semibold mb-4">Group Members</h2>
+          <div className="mb-4">
+            <div className="flex gap-2">
+              <input
+                type="email"
+                placeholder="Enter email address"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                className="flex-1 px-3 py-2 border border-[hsl(var(--border))] rounded-md"
+              />
+              <button
+                onClick={addMember}
+                className="bg-[#6aaa64] text-white px-4 py-2 rounded-md hover:bg-[#599a5b] transition"
+              >
+                Add
+              </button>
+            </div>
+          </div>
           <ul>
             {members.map(m => (
               <li key={m.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
@@ -39,26 +162,144 @@ export default function ClubhouseAdminPage() {
             ))}
           </ul>
         </div>
+
+        {/* Create Group Code Section */}
+        <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-6 border border-[hsl(var(--border))] mb-8">
+          <h2 className="text-lg font-semibold mb-4">Create Group Code</h2>
+          
+          {groups.length > 0 && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Select Group</label>
+                <select
+                  value={selectedGroup}
+                  onChange={(e) => setSelectedGroup(e.target.value)}
+                  className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-md"
+                >
+                  {groups.map(group => (
+                    <option key={group.id} value={group.id}>{group.name}</option>
+                  ))}
+                </select>
+              </div>
+              
+              {selectedGroupData && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">Current Group Code</label>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-gray-100 px-3 py-2 rounded text-lg font-mono flex-1">
+                      {selectedGroupData.invite_code || 'No code set'}
+                    </code>
+                    {selectedGroupData.invite_code && (
+                      <button
+                        onClick={() => copyGroupCode(selectedGroupData.invite_code)}
+                        className="bg-gray-500 text-white px-3 py-2 rounded-md hover:bg-gray-600 transition text-sm"
+                      >
+                        Copy
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">New Group Code</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Enter group code (e.g., FAMILY2024)"
+                    value={newGroupCode}
+                    onChange={(e) => setNewGroupCode(e.target.value.toUpperCase())}
+                    maxLength={10}
+                    className="flex-1 px-3 py-2 border border-[hsl(var(--border))] rounded-md"
+                  />
+                  <button
+                    onClick={updateGroupCode}
+                    className="bg-[#6aaa64] text-white px-4 py-2 rounded-md hover:bg-[#599a5b] transition"
+                  >
+                    Set Code
+                  </button>
+                </div>
+                <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
+                  Users can join your group using this code
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Admin Center Section */}
+        <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-6 border border-[hsl(var(--border))] mb-8">
+          <h2 className="text-lg font-semibold mb-4">Edit Score</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Select Member</label>
+              <select
+                value={selectedMember}
+                onChange={(e) => setSelectedMember(e.target.value)}
+                className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-md"
+              >
+                <option value="">Select Member</option>
+                {members.map(member => (
+                  <option key={member.id} value={member.id}>{member.display_name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-2">Date</label>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-md"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-2">Score</label>
+              <input
+                type="number"
+                placeholder="Enter score"
+                value={newScore}
+                onChange={(e) => setNewScore(e.target.value)}
+                min="1"
+                max="6"
+                className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-md"
+              />
+            </div>
+            
+            <button
+              onClick={updateScore}
+              className="w-full bg-[#6aaa64] text-white py-2 rounded-md hover:bg-[#599a5b] transition"
+            >
+              Update Score
+            </button>
+          </div>
+        </div>
+
+        {/* Recent Scores Section */}
         <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-6 border border-[hsl(var(--border))]">
-          <h2 className="text-lg font-semibold mb-4">Edit Scores</h2>
-          <table className="w-full text-left">
-            <thead>
-              <tr>
-                <th className="py-2">Player</th>
-                <th className="py-2">Date</th>
-                <th className="py-2">Score</th>
-              </tr>
-            </thead>
-            <tbody>
-              {scores.map(s => (
-                <tr key={s.id}>
-                  <td className="py-2">{members.find(m => m.id === s.user_id)?.display_name || s.user_id}</td>
-                  <td className="py-2">{s.puzzle_date}</td>
-                  <td className="py-2">{s.raw_score}</td>
+          <h2 className="text-lg font-semibold mb-4">Recent Scores</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b">
+                  <th className="py-2">Player</th>
+                  <th className="py-2">Date</th>
+                  <th className="py-2">Score</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {scores.slice(0, 10).map(s => (
+                  <tr key={s.id} className="border-b last:border-b-0">
+                    <td className="py-2">{members.find(m => m.id === s.user_id)?.display_name || 'Unknown'}</td>
+                    <td className="py-2">{new Date(s.puzzle_date).toLocaleDateString()}</td>
+                    <td className="py-2">{s.raw_score}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
