@@ -5,7 +5,8 @@ import { Database } from '@/types/supabase';
 import { toast } from 'sonner';
 
 export default function ClubhouseAdminPage() {
-  console.log('🚀 ADMIN PAGE COMPONENT LOADED!');
+  console.log('🚀🚀🚀 ADMIN PAGE COMPONENT LOADED - NEW VERSION! 🚀🚀🚀');
+  console.log('🔥 TESTING IF NEW CODE IS RUNNING 🔥');
   
   const [members, setMembers] = useState<any[]>([]);
   const [scores, setScores] = useState<any[]>([]);
@@ -211,6 +212,11 @@ export default function ClubhouseAdminPage() {
     <div className="min-h-screen bg-[hsl(var(--background))] p-4">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold mb-6">Admin Center</h1>
+        
+        {/* TESTING INDICATOR */}
+        <div className="bg-red-500 text-white p-4 rounded-lg mb-4 text-center font-bold">
+          🔥 NEW CODE VERSION LOADED - TESTING 🔥
+        </div>
         
         {/* Loading State */}
         {loading && (
