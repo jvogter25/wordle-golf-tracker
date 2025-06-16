@@ -74,8 +74,7 @@ export async function getGroupMembers(client: SupabaseClient, groupId: string) {
       profiles (
         id,
         display_name,
-        avatar_url,
-        handicap
+        avatar_url
       )
     `)
     .eq('group_id', groupId)
@@ -90,7 +89,7 @@ export async function getGroupMembers(client: SupabaseClient, groupId: string) {
     id: member.profiles?.id,
     display_name: member.profiles?.display_name,
     avatar_url: member.profiles?.avatar_url,
-    handicap: member.profiles?.handicap || 0
+    handicap: 0 // Default handicap since it's in a separate table
   })) || []
 }
 
