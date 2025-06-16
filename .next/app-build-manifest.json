@@ -33,6 +33,14 @@
       "static/chunks/945-ea1aa01010ca147a.js",
       "static/chunks/app/auth/signup/page-1b9226d85cf08a07.js"
     ],
+    "/auth/setup-password/page": [
+      "static/chunks/webpack-f2c1654fbeea4d4f.js",
+      "static/chunks/fd9d1056-f20af870d332b75a.js",
+      "static/chunks/472-6857136a8d8139ce.js",
+      "static/chunks/main-app-9b4cc9751f3e054a.js",
+      "static/chunks/881-133ab168223b5752.js",
+      "static/chunks/app/auth/setup-password/page-ceb9b27226845179.js"
+    ],
     "/auth/login/page": [
       "static/chunks/webpack-f2c1654fbeea4d4f.js",
       "static/chunks/fd9d1056-f20af870d332b75a.js",
@@ -42,13 +50,13 @@
       "static/chunks/945-ea1aa01010ca147a.js",
       "static/chunks/app/auth/login/page-01e0a219ff4c2c80.js"
     ],
-    "/auth/setup-password/page": [
+    "/golf/clubhouse/[groupId]/page": [
       "static/chunks/webpack-f2c1654fbeea4d4f.js",
       "static/chunks/fd9d1056-f20af870d332b75a.js",
       "static/chunks/472-6857136a8d8139ce.js",
       "static/chunks/main-app-9b4cc9751f3e054a.js",
       "static/chunks/881-133ab168223b5752.js",
-      "static/chunks/app/auth/setup-password/page-ceb9b27226845179.js"
+      "static/chunks/app/golf/clubhouse/[groupId]/page-bbd2a46427b27bbe.js"
     ],
     "/golf/clubhouse/admin-simple/page": [
       "static/chunks/webpack-f2c1654fbeea4d4f.js",
@@ -59,14 +67,6 @@
       "static/chunks/424-a731d1f422b08e33.js",
       "static/chunks/app/golf/clubhouse/admin-simple/page-01ff3a2b4bdcd731.js"
     ],
-    "/golf/clubhouse/[groupId]/page": [
-      "static/chunks/webpack-f2c1654fbeea4d4f.js",
-      "static/chunks/fd9d1056-f20af870d332b75a.js",
-      "static/chunks/472-6857136a8d8139ce.js",
-      "static/chunks/main-app-9b4cc9751f3e054a.js",
-      "static/chunks/881-133ab168223b5752.js",
-      "static/chunks/app/golf/clubhouse/[groupId]/page-bbd2a46427b27bbe.js"
-    ],
     "/golf/clubhouse/page": [
       "static/chunks/webpack-f2c1654fbeea4d4f.js",
       "static/chunks/fd9d1056-f20af870d332b75a.js",
@@ -75,14 +75,6 @@
       "static/chunks/881-133ab168223b5752.js",
       "static/chunks/945-ea1aa01010ca147a.js",
       "static/chunks/app/golf/clubhouse/page-dd986c618ae96964.js"
-    ],
-    "/golf/homepage/page": [
-      "static/chunks/webpack-f2c1654fbeea4d4f.js",
-      "static/chunks/fd9d1056-f20af870d332b75a.js",
-      "static/chunks/472-6857136a8d8139ce.js",
-      "static/chunks/main-app-9b4cc9751f3e054a.js",
-      "static/chunks/945-ea1aa01010ca147a.js",
-      "static/chunks/app/golf/homepage/page-4ef5380826f73f74.js"
     ],
     "/golf/group/[groupId]/page": [
       "static/chunks/webpack-f2c1654fbeea4d4f.js",
@@ -101,14 +93,13 @@
       "static/chunks/945-ea1aa01010ca147a.js",
       "static/chunks/app/golf/leaderboard/monthly/page-4ff707d79100b562.js"
     ],
-    "/golf/leaderboard/page": [
+    "/golf/homepage/page": [
       "static/chunks/webpack-f2c1654fbeea4d4f.js",
       "static/chunks/fd9d1056-f20af870d332b75a.js",
       "static/chunks/472-6857136a8d8139ce.js",
       "static/chunks/main-app-9b4cc9751f3e054a.js",
-      "static/chunks/881-133ab168223b5752.js",
       "static/chunks/945-ea1aa01010ca147a.js",
-      "static/chunks/app/golf/leaderboard/page-79ee9f31ec95bab8.js"
+      "static/chunks/app/golf/homepage/page-4ef5380826f73f74.js"
     ],
     "/golf/submit/page": [
       "static/chunks/webpack-f2c1654fbeea4d4f.js",
@@ -118,6 +109,15 @@
       "static/chunks/881-133ab168223b5752.js",
       "static/chunks/945-ea1aa01010ca147a.js",
       "static/chunks/app/golf/submit/page-f34d16cad6c1034d.js"
+    ],
+    "/golf/leaderboard/page": [
+      "static/chunks/webpack-f2c1654fbeea4d4f.js",
+      "static/chunks/fd9d1056-f20af870d332b75a.js",
+      "static/chunks/472-6857136a8d8139ce.js",
+      "static/chunks/main-app-9b4cc9751f3e054a.js",
+      "static/chunks/881-133ab168223b5752.js",
+      "static/chunks/945-ea1aa01010ca147a.js",
+      "static/chunks/app/golf/leaderboard/page-79ee9f31ec95bab8.js"
     ],
     "/golf/player/page": [
       "static/chunks/webpack-f2c1654fbeea4d4f.js",
@@ -146,15 +146,6 @@
       "static/chunks/945-ea1aa01010ca147a.js",
       "static/chunks/app/golf/tournaments/page-9b29a2dc72bcf54c.js"
     ],
-    "/groups/[id]/page": [
-      "static/chunks/webpack-f2c1654fbeea4d4f.js",
-      "static/chunks/fd9d1056-f20af870d332b75a.js",
-      "static/chunks/472-6857136a8d8139ce.js",
-      "static/chunks/main-app-9b4cc9751f3e054a.js",
-      "static/chunks/881-133ab168223b5752.js",
-      "static/chunks/945-ea1aa01010ca147a.js",
-      "static/chunks/app/groups/[id]/page-b278cddb46bde5fa.js"
-    ],
     "/groups/page": [
       "static/chunks/webpack-f2c1654fbeea4d4f.js",
       "static/chunks/fd9d1056-f20af870d332b75a.js",
@@ -173,14 +164,14 @@
       "static/chunks/945-ea1aa01010ca147a.js",
       "static/chunks/app/leaderboard/page-4a7e319202ca767e.js"
     ],
-    "/profile/page": [
+    "/groups/[id]/page": [
       "static/chunks/webpack-f2c1654fbeea4d4f.js",
       "static/chunks/fd9d1056-f20af870d332b75a.js",
       "static/chunks/472-6857136a8d8139ce.js",
       "static/chunks/main-app-9b4cc9751f3e054a.js",
       "static/chunks/881-133ab168223b5752.js",
       "static/chunks/945-ea1aa01010ca147a.js",
-      "static/chunks/app/profile/page-bfe32697093a9bbe.js"
+      "static/chunks/app/groups/[id]/page-b278cddb46bde5fa.js"
     ],
     "/submit/page": [
       "static/chunks/webpack-f2c1654fbeea4d4f.js",
@@ -199,6 +190,15 @@
       "static/chunks/945-ea1aa01010ca147a.js",
       "static/chunks/app/page-de61cf9bf4799b74.js"
     ],
+    "/profile/page": [
+      "static/chunks/webpack-f2c1654fbeea4d4f.js",
+      "static/chunks/fd9d1056-f20af870d332b75a.js",
+      "static/chunks/472-6857136a8d8139ce.js",
+      "static/chunks/main-app-9b4cc9751f3e054a.js",
+      "static/chunks/881-133ab168223b5752.js",
+      "static/chunks/945-ea1aa01010ca147a.js",
+      "static/chunks/app/profile/page-bfe32697093a9bbe.js"
+    ],
     "/golf/clubhouse/admin-new/page": [
       "static/chunks/webpack-f2c1654fbeea4d4f.js",
       "static/chunks/fd9d1056-f20af870d332b75a.js",
@@ -215,7 +215,7 @@
       "static/chunks/main-app-9b4cc9751f3e054a.js",
       "static/chunks/881-133ab168223b5752.js",
       "static/chunks/424-a731d1f422b08e33.js",
-      "static/chunks/app/golf/clubhouse/admin/page-3a145e31eb41c3c6.js"
+      "static/chunks/app/golf/clubhouse/admin/page-4b128ba9d4d31ee2.js"
     ]
   }
 }

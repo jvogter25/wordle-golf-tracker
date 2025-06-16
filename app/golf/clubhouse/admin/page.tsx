@@ -74,37 +74,87 @@ export default function ClubhouseAdminPage() {
         // Fetch groups - try different approaches to bypass RLS issues
         console.log('🏢 FETCHING GROUPS...');
         
-        // First try: Get all groups
-        const { data: groupsData, error: groupsError } = await supabase.from('groups').select('*');
-        console.log('🏢 GROUPS RESULT (all):', { 
-          data: groupsData, 
-          error: groupsError,
-          dataLength: groupsData?.length,
-          firstGroup: groupsData?.[0]
+        // Try 1: Get groups where user is a member (via group_members table)
+        console.log('🏢 TRYING: Groups via group_members...');
+        const { data: memberGroupsData, error: memberGroupsError } = await supabase
+          .from('group_members')
+          .select(`
+            group_id,
+            role,
+            groups (
+              id,
+              name,
+              description,
+              invite_code,
+              created_by,
+              created_at
+            )
+          `)
+          .eq('user_id', user.id);
+        
+        console.log('🏢 MEMBER GROUPS RESULT:', { 
+          data: memberGroupsData, 
+          error: memberGroupsError,
+          dataLength: memberGroupsData?.length
+        });
+
+        // Try 2: Get all groups (fallback)
+        const { data: allGroupsData, error: allGroupsError } = await supabase.from('groups').select('*');
+        console.log('🏢 ALL GROUPS RESULT:', { 
+          data: allGroupsData, 
+          error: allGroupsError,
+          dataLength: allGroupsData?.length,
+          firstGroup: allGroupsData?.[0]
         });
         
-        // Second try: Get groups where user is creator
+        // Try 3: Get groups where user is creator
         const { data: userGroupsData, error: userGroupsError } = await supabase
           .from('groups')
           .select('*')
           .eq('created_by', user.id);
-        console.log('🏢 USER GROUPS RESULT:', { 
+        console.log('🏢 USER CREATED GROUPS RESULT:', { 
           data: userGroupsData, 
           error: userGroupsError,
           dataLength: userGroupsData?.length
         });
-        if (groupsError) {
-          errorList.push(`Groups error: ${groupsError.message}`);
-          console.log('❌ GROUPS ERROR:', groupsError);
+
+        // Determine which groups to use
+        let finalGroups = [];
+        if (memberGroupsData && memberGroupsData.length > 0) {
+          // Use groups from membership table
+          finalGroups = memberGroupsData.map(mg => mg.groups).filter(g => g !== null);
+          console.log('✅ USING MEMBER GROUPS:', finalGroups);
+        } else if (allGroupsData && allGroupsData.length > 0) {
+          // Use all groups as fallback
+          finalGroups = allGroupsData;
+          console.log('✅ USING ALL GROUPS:', finalGroups);
+        } else if (userGroupsData && userGroupsData.length > 0) {
+          // Use user-created groups
+          finalGroups = userGroupsData;
+          console.log('✅ USING USER CREATED GROUPS:', finalGroups);
         }
-        setGroups(groupsData || []);
+
+        if (memberGroupsError) {
+          errorList.push(`Member groups error: ${memberGroupsError.message}`);
+          console.log('❌ MEMBER GROUPS ERROR:', memberGroupsError);
+        }
+        if (allGroupsError) {
+          errorList.push(`All groups error: ${allGroupsError.message}`);
+          console.log('❌ ALL GROUPS ERROR:', allGroupsError);
+        }
+        if (userGroupsError) {
+          errorList.push(`User groups error: ${userGroupsError.message}`);
+          console.log('❌ USER GROUPS ERROR:', userGroupsError);
+        }
+
+        setGroups(finalGroups);
         
-        if (groupsData && groupsData.length > 0) {
-          setSelectedGroup(groupsData[0].id);
+        if (finalGroups && finalGroups.length > 0) {
+          setSelectedGroup(finalGroups[0].id);
           console.log('✅ SELECTED FIRST GROUP:', {
-            id: groupsData[0].id,
-            name: groupsData[0].name,
-            inviteCode: groupsData[0].invite_code
+            id: finalGroups[0].id,
+            name: finalGroups[0].name,
+            inviteCode: finalGroups[0].invite_code
           });
         } else {
           console.log('❌ NO GROUPS FOUND');
@@ -219,23 +269,30 @@ export default function ClubhouseAdminPage() {
         return;
       }
 
+      console.log('🏗️ CREATING TEST GROUP for user:', user.id);
+
+      // Generate a unique invite code
+      const inviteCode = 'TEST' + Math.random().toString(36).substring(2, 6).toUpperCase();
+
       // Create a test group
       const { data: group, error: groupError } = await supabase
         .from('groups')
         .insert({
-          name: 'Test Group',
-          description: 'Test group for admin functionality',
+          name: 'My Golf Group',
+          description: 'Created via admin panel',
           created_by: user.id,
-          invite_code: 'TESTGRP'
+          invite_code: inviteCode
         })
         .select()
         .single();
 
       if (groupError) {
-        console.error('Group creation error:', groupError);
+        console.error('🚨 Group creation error:', groupError);
         toast.error(`Error creating group: ${groupError.message}`);
         return;
       }
+
+      console.log('✅ GROUP CREATED:', group);
 
       // Add user as admin member
       const { error: memberError } = await supabase
@@ -247,22 +304,19 @@ export default function ClubhouseAdminPage() {
         });
 
       if (memberError) {
-        console.error('Member creation error:', memberError);
+        console.error('🚨 Member creation error:', memberError);
         toast.error(`Error adding admin member: ${memberError.message}`);
         return;
       }
 
-      toast.success('Test group created successfully!');
+      console.log('✅ ADMIN MEMBER ADDED');
+
+      toast.success(`Group created with code: ${inviteCode}`);
       
-      // Refresh groups data
-      const { data: groupsData } = await supabase.from('groups').select('*');
-      setGroups(groupsData || []);
-      
-      if (groupsData && groupsData.length > 0) {
-        setSelectedGroup(groupsData[0].id);
-      }
+      // Refresh the page data by calling fetchData again
+      window.location.reload();
     } catch (error) {
-      console.error('Error in createTestGroup:', error);
+      console.error('🚨 Error in createTestGroup:', error);
       toast.error(`Unexpected error: ${error}`);
     }
   };
