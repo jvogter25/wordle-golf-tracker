@@ -115,7 +115,24 @@ export default function TournamentLeaderboardPage() {
       
       if (leaderboardError) {
         
-        // Fallback: Query scores directly
+        // TEMPORARY FIX: Use current week dates instead of tournament dates
+        // The tournament was created with wrong dates (June 2025 instead of December 2024)
+        const today = new Date();
+        const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        const daysToMonday = currentDay === 0 ? -6 : 1 - currentDay;
+        
+        const monday = new Date(today);
+        monday.setDate(today.getDate() + daysToMonday);
+        
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        
+        const actualStartDate = monday.toISOString().split('T')[0];
+        const actualEndDate = sunday.toISOString().split('T')[0];
+        
+        console.log('Using corrected dates:', actualStartDate, 'to', actualEndDate);
+        
+        // Fallback: Query scores directly using corrected dates
         const { data: scoresData, error: scoresError } = await supabase
           .from('scores')
           .select(`
@@ -126,8 +143,8 @@ export default function TournamentLeaderboardPage() {
               avatar_url
             )
           `)
-          .gte('puzzle_date', tournament.start_date)
-          .lte('puzzle_date', tournament.end_date);
+          .gte('puzzle_date', actualStartDate)
+          .lte('puzzle_date', actualEndDate);
         
         if (scoresError) {
           setLoading(false);
@@ -148,8 +165,9 @@ export default function TournamentLeaderboardPage() {
           .eq('user_id', tournament.birthday_user_id);
         
         console.log('All user scores:', allUserScores);
-        console.log('Tournament dates:', tournament.start_date, 'to', tournament.end_date);
-        console.log('Filtered scores:', scoresData);
+        console.log('Tournament dates (WRONG):', tournament.start_date, 'to', tournament.end_date);
+        console.log('Corrected dates:', actualStartDate, 'to', actualEndDate);
+        console.log('Filtered scores with corrected dates:', scoresData);
         
         // Process scores manually
         const playerScores = new Map();

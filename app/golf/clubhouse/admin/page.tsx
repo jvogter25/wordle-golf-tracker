@@ -14,29 +14,53 @@ export default function ClubhouseAdminPage() {
   const [selectedMember, setSelectedMember] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [newScore, setNewScore] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [errors, setErrors] = useState<string[]>([]);
   const supabase = createClientComponentClient<Database>();
 
   useEffect(() => {
     const fetchData = async () => {
       console.log('Admin page: Starting data fetch...');
+      setLoading(true);
+      const errorList: string[] = [];
       
       try {
+        // Check authentication first
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        console.log('Auth check:', { user: user?.email, error: authError });
+        
+        if (authError || !user) {
+          errorList.push('Authentication failed');
+          setErrors(errorList);
+          setLoading(false);
+          return;
+        }
+        
         // Fetch group members from profiles table
         console.log('Fetching profiles...');
         const { data: membersData, error: membersError } = await supabase.from('profiles').select('*');
         console.log('Profiles result:', { data: membersData, error: membersError });
+        if (membersError) {
+          errorList.push(`Profiles error: ${membersError.message}`);
+        }
         setMembers(membersData || []);
         
         // Fetch scores
         console.log('Fetching scores...');
         const { data: scoresData, error: scoresError } = await supabase.from('scores').select('*').order('puzzle_date', { ascending: false });
         console.log('Scores result:', { data: scoresData?.length, error: scoresError });
+        if (scoresError) {
+          errorList.push(`Scores error: ${scoresError.message}`);
+        }
         setScores(scoresData || []);
         
         // Fetch groups
         console.log('Fetching groups...');
         const { data: groupsData, error: groupsError } = await supabase.from('groups').select('*');
         console.log('Groups result:', { data: groupsData, error: groupsError });
+        if (groupsError) {
+          errorList.push(`Groups error: ${groupsError.message}`);
+        }
         setGroups(groupsData || []);
         
         if (groupsData && groupsData.length > 0) {
@@ -44,9 +68,16 @@ export default function ClubhouseAdminPage() {
           console.log('Selected first group:', groupsData[0].id);
         } else {
           console.log('No groups found');
+          errorList.push('No groups found - you may need to create a group first');
         }
+        
+        setErrors(errorList);
       } catch (error) {
         console.error('Error in fetchData:', error);
+        errorList.push(`Fetch error: ${error}`);
+        setErrors(errorList);
+      } finally {
+        setLoading(false);
       }
     };
     fetchData();
@@ -147,13 +178,33 @@ export default function ClubhouseAdminPage() {
       <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold mb-6">Admin Center</h1>
         
+        {/* Loading State */}
+        {loading && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-700">
+            Loading admin data...
+          </div>
+        )}
+        
+        {/* Error Display */}
+        {errors.length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-sm text-red-700">
+            <div className="font-semibold mb-2">Errors:</div>
+            {errors.map((error, idx) => (
+              <div key={idx}>• {error}</div>
+            ))}
+          </div>
+        )}
+        
         {/* Debug Info */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-700">
+          <div className="font-semibold mb-2">Debug Information:</div>
+          <div>Loading: {loading ? 'Yes' : 'No'}</div>
           <div>Groups Length: {groups.length}</div>
-          <div>Groups Data: {JSON.stringify(groups)}</div>
+          <div>Groups Data: {JSON.stringify(groups, null, 2)}</div>
           <div>Selected Group: {selectedGroup}</div>
-          <div>Selected Group Data: {JSON.stringify(selectedGroupData)}</div>
+          <div>Selected Group Data: {JSON.stringify(selectedGroupData, null, 2)}</div>
           <div>Members Length: {members.length}</div>
+          <div>Errors Count: {errors.length}</div>
         </div>
         
         {/* Group Members Section */}
