@@ -43,10 +43,39 @@ export async function joinGroupByCode(client: SupabaseClient, inviteCode: string
   const user = await client.auth.getUser()
   if (!user.data.user) throw new Error('Not authenticated')
   
-  // Use database function to join group
-  const { data, error } = await client.rpc('join_group_by_code', {
-    invite_code_param: inviteCode
-  })
+  // Find group by invite code
+  const { data: group, error: groupError } = await client
+    .from('groups')
+    .select('id')
+    .eq('invite_code', inviteCode.toUpperCase())
+    .single()
+  
+  if (groupError || !group) {
+    throw new Error('Invalid invite code')
+  }
+  
+  // Check if user is already a member
+  const { data: existingMember } = await client
+    .from('group_members')
+    .select('id')
+    .eq('group_id', group.id)
+    .eq('user_id', user.data.user.id)
+    .single()
+  
+  if (existingMember) {
+    throw new Error('You are already a member of this group')
+  }
+  
+  // Add user to group
+  const { data, error } = await client
+    .from('group_members')
+    .insert({
+      group_id: group.id,
+      user_id: user.data.user.id,
+      role: 'member'
+    })
+    .select()
+    .single()
   
   if (error) throw new Error(error.message)
   
@@ -57,12 +86,29 @@ export async function getUserGroups(client: SupabaseClient) {
   const user = await client.auth.getUser()
   if (!user.data.user) throw new Error('Not authenticated')
   
-  // Use database function to get user groups
-  const { data, error } = await client.rpc('get_user_groups')
+  // Direct query instead of RPC function
+  const { data, error } = await client
+    .from('group_members')
+    .select(`
+      group_id,
+      role,
+      groups (
+        id,
+        name,
+        description,
+        invite_code,
+        created_at
+      )
+    `)
+    .eq('user_id', user.data.user.id)
   
-  if (error) throw error
+  if (error) {
+    console.log('User groups query error:', error)
+    return []
+  }
   
-  return data || []
+  // Transform the data to match expected format
+  return data?.map(member => member.groups).filter(group => group !== null) || []
 }
 
 export async function getGroupMembers(client: SupabaseClient, groupId: string) {
@@ -97,10 +143,13 @@ export async function leaveGroup(client: SupabaseClient, groupId: string) {
   const user = await client.auth.getUser()
   if (!user.data.user) throw new Error('Not authenticated')
   
-  // Use database function to leave group
-  const { data, error } = await client.rpc('leave_group', {
-    group_id_param: groupId
-  })
+  // Remove user from group
+  const { data, error } = await client
+    .from('group_members')
+    .delete()
+    .eq('group_id', groupId)
+    .eq('user_id', user.data.user.id)
+    .select()
   
   if (error) throw error
   
