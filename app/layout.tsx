@@ -1,12 +1,14 @@
-import React from 'react'
-import type { Metadata } from 'next'
 import './globals.css'
+import { Inter } from 'next/font/google'
 import { AuthProvider } from '../contexts/AuthContext'
-import AuthGuard from '../components/AuthGuard'
+import { GroupProvider } from '../contexts/GroupContext'
+import { Toaster } from 'sonner'
 
-export const metadata: Metadata = {
+const inter = Inter({ subsets: ['latin'] })
+
+export const metadata = {
   title: 'Wordle Golf Tracker',
-  description: 'Family Wordle competition with golf scoring and tournaments',
+  description: 'Track your Wordle golf scores and compete with friends',
 }
 
 export default function RootLayout({
@@ -16,11 +18,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased">
+      <body className={inter.className}>
         <AuthProvider>
-          <AuthGuard>
+          <GroupProvider>
             {children}
-          </AuthGuard>
+            <Toaster />
+          </GroupProvider>
         </AuthProvider>
       </body>
     </html>
