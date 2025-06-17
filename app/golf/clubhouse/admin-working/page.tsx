@@ -3,10 +3,66 @@ import { useEffect, useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Database } from '@/types/supabase';
 import { toast } from 'sonner';
+import Link from 'next/link';
+import { Menu, X } from 'lucide-react';
+
+function WordleHeader({ label }: { label: string }) {
+  const colors = ['bg-[#6aaa64]', 'bg-[#c9b458]', 'bg-[#787c7e]'];
+  return (
+    <div className="flex justify-center gap-1 mb-8">
+      {label.split('').map((letter, idx) => (
+        <span
+          key={idx}
+          className={`${colors[idx % colors.length]} w-12 h-12 md:w-14 md:h-14 flex items-center justify-center rounded-md font-bold text-white text-2xl md:text-3xl shadow-[0_2px_4px_rgba(0,0,0,0.12)] select-none`}
+          style={{ fontFamily: 'Montserrat, Poppins, Arial, sans-serif', letterSpacing: '0.05em' }}
+        >
+          {letter}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+const navLinks = [
+  { href: '/golf/homepage', label: 'Home' },
+  { href: '/golf/leaderboard', label: 'Leaderboard' },
+  { href: '/golf/player', label: 'Player Card' },
+  { href: '/golf/tournaments', label: 'Tournaments' },
+  { href: '/golf/submit', label: 'Submit Score' },
+  { href: '/golf/clubhouse', label: 'Clubhouse' },
+  { href: '/golf/clubhouse/admin-working', label: 'Admin Center' },
+];
+
+function BurgerMenu() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        className="p-2 rounded-md bg-[hsl(var(--card))] border border-[hsl(var(--border))] shadow-md"
+        onClick={() => setOpen(!open)}
+        aria-label="Open navigation menu"
+      >
+        {open ? <X size={28} /> : <Menu size={28} />}
+      </button>
+      {open && (
+        <div className="absolute right-0 top-12 w-48 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg shadow-lg z-50 flex flex-col">
+          {navLinks.map(link => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="px-4 py-3 border-b border-[hsl(var(--border))] last:border-b-0 text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] font-semibold text-base transition"
+              onClick={() => setOpen(false)}
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function WorkingAdminPage() {
-  console.log('🆕 BRAND NEW ADMIN PAGE LOADED!', new Date().toISOString());
-  
   const [groups, setGroups] = useState<any[]>([]);
   const [selectedGroup, setSelectedGroup] = useState("");
   const [newGroupCode, setNewGroupCode] = useState("");
@@ -15,33 +71,22 @@ export default function WorkingAdminPage() {
 
   useEffect(() => {
     const fetchGroups = async () => {
-      console.log('🔍 FETCHING GROUPS - NEW APPROACH');
       setLoading(true);
       
       try {
         const { data: { user }, error: authError } = await supabase.auth.getUser();
-        console.log('👤 USER:', user?.email);
         
         if (authError || !user) {
-          console.log('❌ AUTH ERROR:', authError);
           setLoading(false);
           return;
         }
 
-        // Method 1: Try to get all groups (simplest approach)
-        console.log('📋 TRYING: Get all groups');
+        // Try to get all groups first
         const { data: allGroups, error: allGroupsError } = await supabase
           .from('groups')
           .select('*');
-        
-        console.log('📋 ALL GROUPS RESULT:', { 
-          data: allGroups, 
-          error: allGroupsError,
-          count: allGroups?.length 
-        });
 
-        // Method 2: Try to get groups via group_members
-        console.log('👥 TRYING: Get groups via membership');
+        // Try to get groups via group_members as backup
         const { data: memberData, error: memberError } = await supabase
           .from('group_members')
           .select(`
@@ -50,24 +95,15 @@ export default function WorkingAdminPage() {
             groups (*)
           `)
           .eq('user_id', user.id);
-        
-        console.log('👥 MEMBER GROUPS RESULT:', { 
-          data: memberData, 
-          error: memberError,
-          count: memberData?.length 
-        });
 
         // Use whichever method worked
         let finalGroups = [];
         if (allGroups && allGroups.length > 0) {
           finalGroups = allGroups;
-          console.log('✅ USING ALL GROUPS');
         } else if (memberData && memberData.length > 0) {
           finalGroups = memberData.map(m => m.groups).filter(g => g !== null);
-          console.log('✅ USING MEMBER GROUPS');
         }
 
-        console.log('🎯 FINAL GROUPS:', finalGroups);
         setGroups(finalGroups);
         
         if (finalGroups.length > 0) {
@@ -75,7 +111,7 @@ export default function WorkingAdminPage() {
         }
         
       } catch (error) {
-        console.error('💥 ERROR:', error);
+        console.error('Error fetching groups:', error);
       } finally {
         setLoading(false);
       }
@@ -90,8 +126,6 @@ export default function WorkingAdminPage() {
       return;
     }
 
-    console.log('🔄 UPDATING GROUP CODE:', { selectedGroup, newGroupCode });
-
     try {
       const { error } = await supabase
         .from('groups')
@@ -99,7 +133,6 @@ export default function WorkingAdminPage() {
         .eq('id', selectedGroup);
 
       if (error) {
-        console.error('❌ UPDATE ERROR:', error);
         toast.error('Error updating group code');
         return;
       }
@@ -110,7 +143,6 @@ export default function WorkingAdminPage() {
       // Refresh groups
       window.location.reload();
     } catch (error) {
-      console.error('💥 UPDATE ERROR:', error);
       toast.error('Unexpected error');
     }
   };
@@ -125,41 +157,46 @@ export default function WorkingAdminPage() {
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] p-4">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">Working Admin Center</h1>
-        
-        {/* Status */}
-        <div className="bg-green-500 text-white p-4 rounded-lg mb-4 text-center font-bold">
-          🆕 FRESH ADMIN PAGE - NO CACHE ISSUES
-          <br />
-          ⏰ {new Date().toLocaleTimeString()}
-        </div>
+        {/* Navigation Header */}
+        <nav className="bg-[hsl(var(--card))] shadow-sm px-4 py-2 flex justify-between items-center border-b border-[hsl(var(--border))] mb-4">
+          <Link href="/golf/player" className="flex items-center space-x-3">
+            <div className="relative">
+              <img
+                src="/golf/jake-avatar.jpg"
+                alt="Jake Vogter"
+                className="w-12 h-12 rounded-full border-2 border-[hsl(var(--primary))] object-cover"
+              />
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[hsl(var(--primary))] rounded-full border-2 border-[hsl(var(--card))]" />
+            </div>
+          </Link>
+          <div className="flex-1 flex justify-center">
+            <Link href="/golf/homepage" className="bg-[#6aaa64] text-white px-6 py-2 rounded-full font-bold shadow hover:bg-[#599a5b] transition">Home</Link>
+          </div>
+          <div className="flex items-center justify-end">
+            <BurgerMenu />
+          </div>
+        </nav>
+
+        <WordleHeader label="ADMIN CENTER" />
         
         {loading && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-700">
             Loading groups...
           </div>
         )}
-        
-        {/* Debug Info */}
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4 text-sm">
-          <div className="font-semibold mb-2">Debug Info:</div>
-          <div>Groups Found: {groups.length}</div>
-          <div>Selected Group: {selectedGroup}</div>
-          <div>Groups Data: {JSON.stringify(groups.map(g => ({ id: g.id, name: g.name, code: g.invite_code })), null, 2)}</div>
-        </div>
 
         {/* Group Code Management */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold mb-4">Group Invite Codes</h2>
+        <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-6 border border-[hsl(var(--border))]">
+          <h2 className="text-xl font-semibold mb-4 text-[hsl(var(--foreground))]">Group Invite Codes</h2>
           
           {groups.length > 0 ? (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Select Group</label>
+                <label className="block text-sm font-medium mb-2 text-[hsl(var(--foreground))]">Select Group</label>
                 <select
                   value={selectedGroup}
                   onChange={(e) => setSelectedGroup(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full p-3 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] text-[hsl(var(--foreground))] focus:ring-2 focus:ring-[hsl(var(--primary))] focus:border-transparent"
                 >
                   {groups.map(group => (
                     <option key={group.id} value={group.id}>
@@ -171,15 +208,15 @@ export default function WorkingAdminPage() {
               
               {selectedGroupData && (
                 <div>
-                  <label className="block text-sm font-medium mb-2">Current Invite Code</label>
+                  <label className="block text-sm font-medium mb-2 text-[hsl(var(--foreground))]">Current Invite Code</label>
                   <div className="flex items-center gap-2">
-                    <code className="bg-gray-100 px-3 py-2 rounded text-lg font-mono flex-1">
+                    <code className="bg-[hsl(var(--muted))] px-4 py-3 rounded-lg text-lg font-mono flex-1 text-[hsl(var(--foreground))] border border-[hsl(var(--border))]">
                       {selectedGroupData.invite_code || 'No code set'}
                     </code>
                     {selectedGroupData.invite_code && (
                       <button
                         onClick={() => copyGroupCode(selectedGroupData.invite_code)}
-                        className="bg-blue-500 text-white px-3 py-2 rounded hover:bg-blue-600"
+                        className="bg-[#6aaa64] text-white px-6 py-3 rounded-lg hover:bg-[#599a5b] transition font-semibold"
                       >
                         Copy
                       </button>
@@ -189,7 +226,7 @@ export default function WorkingAdminPage() {
               )}
               
               <div>
-                <label className="block text-sm font-medium mb-2">Set New Invite Code</label>
+                <label className="block text-sm font-medium mb-2 text-[hsl(var(--foreground))]">Set New Invite Code</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -197,24 +234,24 @@ export default function WorkingAdminPage() {
                     value={newGroupCode}
                     onChange={(e) => setNewGroupCode(e.target.value.toUpperCase())}
                     maxLength={10}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
+                    className="flex-1 p-3 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] text-[hsl(var(--foreground))] focus:ring-2 focus:ring-[hsl(var(--primary))] focus:border-transparent"
                   />
                   <button
                     onClick={updateGroupCode}
-                    className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                    className="bg-[#6aaa64] text-white px-6 py-3 rounded-lg hover:bg-[#599a5b] transition font-semibold"
                   >
                     Set Code
                   </button>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-sm text-[hsl(var(--muted-foreground))] mt-2">
                   Share this code with others so they can join your group
                 </p>
               </div>
             </div>
           ) : (
             <div className="text-center py-8">
-              <p className="text-gray-600 mb-4">No groups found</p>
-              <p className="text-sm text-gray-500">
+              <p className="text-[hsl(var(--muted-foreground))] mb-4">No groups found</p>
+              <p className="text-sm text-[hsl(var(--muted-foreground))]">
                 Make sure you've created a group or are a member of one
               </p>
             </div>
