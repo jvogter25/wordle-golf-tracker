@@ -86,6 +86,8 @@ export async function getUserGroups(client: SupabaseClient) {
   const user = await client.auth.getUser()
   if (!user.data.user) throw new Error('Not authenticated')
   
+  console.log('🔍 Getting groups for user:', user.data.user.id)
+  
   // Get only groups where the user is a member
   const { data, error } = await client
     .from('group_members')
@@ -102,13 +104,17 @@ export async function getUserGroups(client: SupabaseClient) {
     `)
     .eq('user_id', user.data.user.id)
   
+  console.log('🔍 Group members query result:', { data, error })
+  
   if (error) {
     console.log('User groups query error:', error)
     return []
   }
   
   // Transform the data to match expected format
-  return data?.map(member => member.groups).filter(group => group !== null) || []
+  const groups = data?.map(member => member.groups).filter(group => group !== null) || []
+  console.log('🔍 Final groups returned:', groups)
+  return groups
 }
 
 export async function getGroupMembers(client: SupabaseClient, groupId: string) {
@@ -154,4 +160,39 @@ export async function leaveGroup(client: SupabaseClient, groupId: string) {
   if (error) throw error
   
   return data
+}
+
+export async function deleteGroup(client: SupabaseClient, groupId: string) {
+  const user = await client.auth.getUser()
+  if (!user.data.user) throw new Error('Not authenticated')
+  
+  // Check if user is admin of the group
+  const { data: membership, error: memberError } = await client
+    .from('group_members')
+    .select('role')
+    .eq('group_id', groupId)
+    .eq('user_id', user.data.user.id)
+    .single()
+  
+  if (memberError || !membership || membership.role !== 'admin') {
+    throw new Error('Only group admins can delete groups')
+  }
+  
+  // Delete all group members first
+  const { error: membersError } = await client
+    .from('group_members')
+    .delete()
+    .eq('group_id', groupId)
+  
+  if (membersError) throw membersError
+  
+  // Delete the group
+  const { error: groupError } = await client
+    .from('groups')
+    .delete()
+    .eq('id', groupId)
+  
+  if (groupError) throw groupError
+  
+  return true
 } 

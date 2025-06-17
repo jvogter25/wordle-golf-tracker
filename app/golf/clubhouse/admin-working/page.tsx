@@ -4,7 +4,8 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Database } from '@/types/supabase';
 import { toast } from 'sonner';
 import Link from 'next/link';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Trash2 } from 'lucide-react';
+import { deleteGroup } from '../../../../lib/groups';
 
 function WordleHeader({ label }: { label: string }) {
   const colors = ['bg-[#6aaa64]', 'bg-[#c9b458]', 'bg-[#787c7e]'];
@@ -147,6 +148,23 @@ export default function WorkingAdminPage() {
     }
   };
 
+  const handleDeleteGroup = async (groupId: string, groupName: string) => {
+    if (!confirm(`Are you sure you want to delete "${groupName}"? This action cannot be undone and will remove all members and data associated with this group.`)) {
+      return;
+    }
+
+    try {
+      await deleteGroup(supabase, groupId);
+      toast.success('Group deleted successfully!');
+      
+      // Refresh groups
+      window.location.reload();
+    } catch (error) {
+      console.error('Delete group error:', error);
+      toast.error(error.message || 'Error deleting group');
+    }
+  };
+
   const copyGroupCode = (code: string) => {
     navigator.clipboard.writeText(code);
     toast.success('Group code copied to clipboard!');
@@ -257,6 +275,33 @@ export default function WorkingAdminPage() {
             </div>
           )}
         </div>
+
+        {/* Group Management Section */}
+        {groups.length > 0 && (
+          <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-6 border border-[hsl(var(--border))] mt-6">
+            <h2 className="text-xl font-semibold mb-4 text-[hsl(var(--foreground))]">Group Management</h2>
+            
+            <div className="space-y-3">
+              {groups.map(group => (
+                <div key={group.id} className="flex items-center justify-between p-4 border border-[hsl(var(--border))] rounded-lg">
+                  <div>
+                    <h3 className="font-semibold text-[hsl(var(--foreground))]">{group.name}</h3>
+                    <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                      Code: <span className="font-mono">{group.invite_code || 'No code set'}</span>
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteGroup(group.id, group.name)}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition font-semibold"
+                  >
+                    <Trash2 size={16} />
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
