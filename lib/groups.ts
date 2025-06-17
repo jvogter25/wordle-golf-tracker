@@ -86,7 +86,7 @@ export async function getUserGroups(client: SupabaseClient) {
   const user = await client.auth.getUser()
   if (!user.data.user) throw new Error('Not authenticated')
   
-  // Direct query instead of RPC function
+  // Get only groups where the user is a member
   const { data, error } = await client
     .from('group_members')
     .select(`
