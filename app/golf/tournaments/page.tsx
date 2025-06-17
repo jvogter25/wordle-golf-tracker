@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getUserGroups } from '../../../lib/groups';
-import { checkAndCreateBirthdayTournaments } from '../../../lib/tournaments';
 
 const navLinks = [
   { href: '/golf/homepage', label: 'Home' },
@@ -81,42 +80,54 @@ export default function TournamentsPage() {
 
   useEffect(() => {
     if (user) {
-      getUserGroups(supabase).then(setGroups);
-      // Check for upcoming birthdays and create tournaments
-      checkAndCreateBirthdayTournaments(supabase).catch(console.error);
+      console.log('🏆 User loaded, fetching groups...');
+      getUserGroups(supabase)
+        .then(groups => {
+          console.log('🏆 Groups loaded:', groups);
+          setGroups(groups);
+        })
+        .catch(err => {
+          console.error('🏆 Groups error:', err);
+          setGroups([]);
+        });
     }
   }, [user]);
 
   useEffect(() => {
+    console.log('🏆 Groups effect:', { groupsLength: groups.length, selectedGroup });
     if (groups.length === 1 && selectedGroup === '') {
+      console.log('🏆 Setting selected group to:', groups[0].id);
       setSelectedGroup(groups[0].id);
     }
     if (selectedGroup) {
+      console.log('🏆 Selected group set, fetching tournaments');
       fetchTournaments();
     }
   }, [selectedGroup, groups]);
 
   const fetchTournaments = async () => {
+    console.log('🏆 Fetching tournaments for group:', selectedGroup);
     setLoading(true);
-    const { data, error } = await supabase
-      .from('tournaments')
-      .select(`
-        *,
-        tournament_participants(count)
-      `)
-      .eq('year', new Date().getFullYear())
-      .eq('tournament_type', 'birthday')  // Only fetch birthday tournaments
-      .order('start_date', { ascending: true });
     
-    // Add participant count to each tournament
-    const tournamentsWithCounts = (data || []).map(t => ({
-      ...t,
-      participant_count: t.tournament_participants?.[0]?.count || 0
-    }));
-    
-    setTournaments(tournamentsWithCounts);
-    setFetchError(error);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from('tournaments')
+        .select('*')
+        .eq('year', new Date().getFullYear())
+        .eq('tournament_type', 'birthday')  // Only fetch birthday tournaments
+        .order('start_date', { ascending: true });
+      
+      console.log('🏆 Tournament data:', data);
+      console.log('🏆 Tournament error:', error);
+      
+      setTournaments(data || []);
+      setFetchError(error);
+    } catch (err) {
+      console.error('🏆 Tournament fetch error:', err);
+      setFetchError(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Partition tournaments
@@ -245,12 +256,12 @@ export default function TournamentsPage() {
             </div>
           )}
 
-          {/* Past Tournaments - Only show tournaments that actually had participants */}
-          {past.filter(t => t.participant_count > 0).length > 0 && (
+          {/* Past Tournaments */}
+          {past.length > 0 && (
             <div className="mb-8">
               <h3 className="text-lg font-semibold mb-2">Past Tournaments</h3>
               <div className="space-y-2">
-                {past.filter(t => t.participant_count > 0).slice(0, 5).map(t => (
+                {past.slice(0, 5).map(t => (
                   <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block">
                     <div className="bg-[hsl(var(--card))] rounded-lg shadow p-4 hover:shadow-md transition">
                       <div className="flex items-center justify-between">
