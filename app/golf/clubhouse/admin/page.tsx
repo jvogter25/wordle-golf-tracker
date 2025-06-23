@@ -1,17 +1,15 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Database } from '@/types/supabase';
+import { Database } from '../../../../src/types/supabase';
 import { toast } from 'sonner';
+import Navigation from '../../../../components/Navigation';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default function ClubhouseAdminPage() {
-  console.log('🚀🚀🚀 ADMIN PAGE v2.0 - ENHANCED GROUPS FETCHING! 🚀🚀🚀');
-  console.log('🔥 CACHE BUSTER:', Math.random());
-  console.log('⏰ TIMESTAMP:', new Date().toISOString());
   
   const [members, setMembers] = useState<any[]>([]);
   const [scores, setScores] = useState<any[]>([]);
@@ -26,14 +24,20 @@ export default function ClubhouseAdminPage() {
   const [errors, setErrors] = useState<string[]>([]);
   const supabase = createClientComponentClient<Database>();
 
-  console.log('🔧 ADMIN PAGE STATE:', { 
-    loading, 
-    groupsLength: groups.length, 
-    membersLength: members.length,
-    errorsLength: errors.length,
-    selectedGroup,
-    newGroupCode
+  // Tournament management state
+  const [tournaments, setTournaments] = useState<any[]>([]);
+  const [showCreateTournament, setShowCreateTournament] = useState(false);
+  const [tournamentForm, setTournamentForm] = useState({
+    name: '',
+    type: 'major' as 'major' | 'birthday',
+    start_date: '',
+    end_date: '',
+    venue: 'Wordle Golf',
+    birthday_user_id: '',
+    birthday_advantage: 0.5
   });
+
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -70,6 +74,18 @@ export default function ClubhouseAdminPage() {
           errorList.push(`Scores error: ${scoresError.message}`);
         }
         setScores(scoresData || []);
+        
+        // Fetch tournaments
+        console.log('Fetching tournaments...');
+        const { data: tournamentsData, error: tournamentsError } = await supabase
+          .from('tournaments')
+          .select('*')
+          .order('start_date', { ascending: false });
+        console.log('Tournaments result:', { data: tournamentsData?.length, error: tournamentsError });
+        if (tournamentsError) {
+          errorList.push(`Tournaments error: ${tournamentsError.message}`);
+        }
+        setTournaments(tournamentsData || []);
         
         // Fetch groups - try different approaches to bypass RLS issues
         console.log('🏢 FETCHING GROUPS...');
@@ -262,62 +278,127 @@ export default function ClubhouseAdminPage() {
   };
 
   const createTestGroup = async () => {
-    try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        toast.error('Authentication failed');
-        return;
-      }
+    const testGroupName = `Test Group ${Date.now()}`;
+    const testInviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    const { data, error } = await supabase
+      .from('groups')
+      .insert([
+        {
+          name: testGroupName,
+          description: 'Test group created by admin',
+          invite_code: testInviteCode
+        }
+      ])
+      .select();
 
-      console.log('🏗️ CREATING TEST GROUP for user:', user.id);
-
-      // Generate a unique invite code
-      const inviteCode = 'TEST' + Math.random().toString(36).substring(2, 6).toUpperCase();
-
-      // Create a test group
-      const { data: group, error: groupError } = await supabase
-        .from('groups')
-        .insert({
-          name: 'My Golf Group',
-          description: 'Created via admin panel',
-          created_by: user.id,
-          invite_code: inviteCode
-        })
-        .select()
-        .single();
-
-      if (groupError) {
-        console.error('🚨 Group creation error:', groupError);
-        toast.error(`Error creating group: ${groupError.message}`);
-        return;
-      }
-
-      console.log('✅ GROUP CREATED:', group);
-
-      // Add user as admin member
-      const { error: memberError } = await supabase
-        .from('group_members')
-        .insert({
-          group_id: group.id,
-          user_id: user.id,
-          role: 'admin'
-        });
-
-      if (memberError) {
-        console.error('🚨 Member creation error:', memberError);
-        toast.error(`Error adding admin member: ${memberError.message}`);
-        return;
-      }
-
-      console.log('✅ ADMIN MEMBER ADDED');
-
-      toast.success(`Group created with code: ${inviteCode}`);
-      
-      // Refresh the page data by calling fetchData again
+    if (error) {
+      console.error('Error creating test group:', error);
+      toast.error(`Failed to create test group: ${error.message}`);
+    } else {
+      console.log('Test group created:', data);
+      toast.success(`Test group "${testGroupName}" created with code: ${testInviteCode}`);
+      // Refresh the page to show the new group
       window.location.reload();
+    }
+  };
+
+  // Tournament management functions
+  const createTournament = async () => {
+    if (!tournamentForm.name.trim()) {
+      toast.error('Please enter a tournament name');
+      return;
+    }
+
+    if (!tournamentForm.start_date || !tournamentForm.end_date) {
+      toast.error('Please select start and end dates');
+      return;
+    }
+
+    if (tournamentForm.type === 'birthday' && !tournamentForm.birthday_user_id) {
+      toast.error('Please select a birthday person for birthday tournaments');
+      return;
+    }
+
+    try {
+      const tournamentData = {
+        name: tournamentForm.name,
+        tournament_type: tournamentForm.type,
+        year: new Date(tournamentForm.start_date).getFullYear(),
+        start_date: tournamentForm.start_date,
+        end_date: tournamentForm.end_date,
+        venue: tournamentForm.venue,
+        is_active: true,
+        ...(tournamentForm.type === 'birthday' && {
+          birthday_user_id: tournamentForm.birthday_user_id,
+          birthday_advantage: tournamentForm.birthday_advantage
+        })
+      };
+
+      const { data, error } = await supabase
+        .from('tournaments')
+        .insert([tournamentData])
+        .select();
+
+      if (error) {
+        console.error('Error creating tournament:', error);
+        toast.error(`Failed to create tournament: ${error.message}`);
+      } else {
+        console.log('Tournament created:', data);
+        toast.success(`Tournament "${tournamentForm.name}" created successfully!`);
+        
+        // Reset form and close modal
+        setTournamentForm({
+          name: '',
+          type: 'major',
+          start_date: '',
+          end_date: '',
+          venue: 'Wordle Golf',
+          birthday_user_id: '',
+          birthday_advantage: 0.5
+        });
+        setShowCreateTournament(false);
+        
+        // Refresh tournaments list
+        const { data: tournamentsData } = await supabase
+          .from('tournaments')
+          .select('*')
+          .order('start_date', { ascending: false });
+        setTournaments(tournamentsData || []);
+      }
     } catch (error) {
-      console.error('🚨 Error in createTestGroup:', error);
-      toast.error(`Unexpected error: ${error}`);
+      console.error('Error creating tournament:', error);
+      toast.error('Failed to create tournament');
+    }
+  };
+
+  const deleteTournament = async (tournamentId: string) => {
+    if (!confirm('Are you sure you want to delete this tournament? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('tournaments')
+        .delete()
+        .eq('id', tournamentId);
+
+      if (error) {
+        console.error('Error deleting tournament:', error);
+        toast.error(`Failed to delete tournament: ${error.message}`);
+      } else {
+        toast.success('Tournament deleted successfully!');
+        
+        // Refresh tournaments list
+        const { data: tournamentsData } = await supabase
+          .from('tournaments')
+          .select('*')
+          .order('start_date', { ascending: false });
+        setTournaments(tournamentsData || []);
+      }
+    } catch (error) {
+      console.error('Error deleting tournament:', error);
+      toast.error('Failed to delete tournament');
     }
   };
 
@@ -326,21 +407,16 @@ export default function ClubhouseAdminPage() {
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] p-4">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">Admin Center</h1>
+        {/* Navigation */}
+        <Navigation 
+          context="global" 
+          centerLink={{
+            href: "/golf/clubhouse",
+            label: "Clubhouse"
+          }}
+        />
         
-        {/* TESTING INDICATOR */}
-        <div className="bg-red-500 text-white p-4 rounded-lg mb-4 text-center font-bold">
-          🔥 ENHANCED GROUPS FETCHING - v2.0 🔥
-          <br />
-          ⏰ {new Date().toLocaleTimeString()}
-          <br />
-          <button 
-            onClick={() => window.location.reload()} 
-            className="bg-white text-red-500 px-3 py-1 rounded mt-2 text-sm font-normal"
-          >
-            🔄 Force Refresh
-          </button>
-        </div>
+        <h1 className="text-2xl font-bold mb-6">Admin Center</h1>
         
         {/* Loading State */}
         {loading && (
@@ -359,17 +435,165 @@ export default function ClubhouseAdminPage() {
           </div>
         )}
         
-        {/* Debug Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-700">
-          <div className="font-semibold mb-2">Debug Information:</div>
-          <div>Loading: {loading ? 'Yes' : 'No'}</div>
-          <div>Groups Length: {groups.length}</div>
-          <div>Groups Data: {JSON.stringify(groups, null, 2)}</div>
-          <div>Selected Group: {selectedGroup}</div>
-          <div>Selected Group Data: {JSON.stringify(selectedGroupData, null, 2)}</div>
-          <div>Members Length: {members.length}</div>
-          <div>Errors Count: {errors.length}</div>
+
+        
+        {/* Tournament Management Section */}
+        <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-6 border border-[hsl(var(--border))] mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold">Tournament Management</h2>
+            <button
+              onClick={() => setShowCreateTournament(true)}
+              className="bg-[#6aaa64] text-white px-4 py-2 rounded-md hover:bg-[#599a5b] transition"
+            >
+              Create Tournament
+            </button>
+          </div>
+          
+          {/* Existing Tournaments */}
+          <div className="space-y-3">
+            {tournaments.length === 0 ? (
+              <p className="text-[hsl(var(--muted-foreground))] text-center py-4">No tournaments created yet</p>
+            ) : (
+              tournaments.map(tournament => (
+                <div key={tournament.id} className="border border-[hsl(var(--border))] rounded-lg p-4">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg">{tournament.name}</h3>
+                      <div className="text-sm text-[hsl(var(--muted-foreground))] space-y-1">
+                        <p>📅 {tournament.start_date} to {tournament.end_date}</p>
+                        <p>🏆 Type: {tournament.tournament_type === 'birthday' ? '🎂 Birthday' : '🏅 Major'}</p>
+                        <p>📍 Venue: {tournament.venue}</p>
+                        <p>🎮 Status: {tournament.is_active ? '✅ Active' : '❌ Inactive'}</p>
+                        {tournament.tournament_type === 'birthday' && (
+                          <p>🎁 Advantage: {tournament.birthday_advantage} strokes</p>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => deleteTournament(tournament.id)}
+                      className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition ml-4"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
+
+        {/* Create Tournament Modal */}
+        {showCreateTournament && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-[hsl(var(--card))] rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+              <h3 className="text-lg font-semibold mb-4">Create Tournament</h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Tournament Name</label>
+                  <input
+                    type="text"
+                    value={tournamentForm.name}
+                    onChange={(e) => setTournamentForm({...tournamentForm, name: e.target.value})}
+                    placeholder="e.g., Jake's Birthday Championship"
+                    className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-md"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Tournament Type</label>
+                  <select
+                    value={tournamentForm.type}
+                    onChange={(e) => setTournamentForm({...tournamentForm, type: e.target.value as 'major' | 'birthday'})}
+                    className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-md"
+                  >
+                    <option value="major">🏅 Major Tournament</option>
+                    <option value="birthday">🎂 Birthday Tournament</option>
+                  </select>
+                </div>
+
+                {tournamentForm.type === 'birthday' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Birthday Person</label>
+                      <select
+                        value={tournamentForm.birthday_user_id}
+                        onChange={(e) => setTournamentForm({...tournamentForm, birthday_user_id: e.target.value})}
+                        className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-md"
+                      >
+                        <option value="">Select Birthday Person</option>
+                        {members.map(member => (
+                          <option key={member.id} value={member.id}>{member.display_name || member.email}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Birthday Advantage (strokes)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="2"
+                        value={tournamentForm.birthday_advantage}
+                        onChange={(e) => setTournamentForm({...tournamentForm, birthday_advantage: parseFloat(e.target.value) || 0})}
+                        className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-md"
+                      />
+                      <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
+                        Stroke advantage given to the birthday person (recommended: 0.5)
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Start Date</label>
+                  <input
+                    type="date"
+                    value={tournamentForm.start_date}
+                    onChange={(e) => setTournamentForm({...tournamentForm, start_date: e.target.value})}
+                    className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-md"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">End Date</label>
+                  <input
+                    type="date"
+                    value={tournamentForm.end_date}
+                    onChange={(e) => setTournamentForm({...tournamentForm, end_date: e.target.value})}
+                    className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-md"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Venue</label>
+                  <input
+                    type="text"
+                    value={tournamentForm.venue}
+                    onChange={(e) => setTournamentForm({...tournamentForm, venue: e.target.value})}
+                    className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-md"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-6">
+                <button
+                  onClick={() => setShowCreateTournament(false)}
+                  className="flex-1 bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={createTournament}
+                  className="flex-1 bg-[#6aaa64] text-white px-4 py-2 rounded-md hover:bg-[#599a5b] transition"
+                >
+                  Create Tournament
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Group Members Section */}
         <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-6 border border-[hsl(var(--border))] mb-8">

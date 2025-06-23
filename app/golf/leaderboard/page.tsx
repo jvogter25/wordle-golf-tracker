@@ -1,9 +1,8 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Database } from '@/types/supabase';
+import { format, subDays } from 'date-fns';
 
 const navLinks = [
   { href: '/golf/homepage', label: 'Home' },
@@ -12,7 +11,6 @@ const navLinks = [
   { href: '/golf/tournaments', label: 'Tournaments' },
   { href: '/golf/submit', label: 'Submit Score' },
   { href: '/golf/clubhouse', label: 'Clubhouse' },
-  { href: '/golf/clubhouse/admin-working', label: 'Admin Center' },
 ];
 
 function BurgerMenu() {
@@ -61,6 +59,67 @@ function WordleHeader({ label }: { label: string }) {
   );
 }
 
+// Mock leaderboard data
+const leaderboard = [
+  {
+    id: 1,
+    name: 'Jake Vogter',
+    avatar: '/golf/jake-avatar.jpg',
+    today: 2, // 🦅
+    handicap: '+1.5',
+  },
+  {
+    id: 2,
+    name: 'Annika Sörenstam',
+    avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
+    today: 3, // 🐦‍⬛
+    handicap: '+0.8',
+  },
+  {
+    id: 3,
+    name: 'Rory McIlroy',
+    avatar: 'https://randomuser.me/api/portraits/men/65.jpg',
+    today: 4, // 🏌️
+    handicap: '+2.2',
+  },
+  {
+    id: 4,
+    name: 'Lexi Thompson',
+    avatar: 'https://randomuser.me/api/portraits/women/68.jpg',
+    today: 1, // ⛳️
+    handicap: '+1.0',
+  },
+  {
+    id: 5,
+    name: 'Brooks Koepka',
+    avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
+    today: 5, // 😬
+    handicap: '+0.5',
+  },
+  {
+    id: 6,
+    name: 'Jon Rahm',
+    avatar: 'https://randomuser.me/api/portraits/men/12.jpg',
+    today: 6, // 😱
+    handicap: '+2.8',
+  },
+  {
+    id: 7,
+    name: 'Dustin Johnson',
+    avatar: 'https://randomuser.me/api/portraits/men/77.jpg',
+    today: 7, // ❌
+    handicap: '+1.7',
+  },
+];
+
+// Generate rolling week dates (last 7 days, ending today, PST)
+const today = new Date();
+const weekDates = Array.from({ length: 7 }, (_, i) => {
+  const d = subDays(today, 6 - i);
+  return format(d, 'M/d');
+});
+
+// Emoji mapping for Today score
 const scoreToEmoji = {
   1: '⛳️',
   2: '🦅',
@@ -71,90 +130,24 @@ const scoreToEmoji = {
   7: '❌',
 };
 
-export default function LeaderboardPage() {
-  const [allTime, setAllTime] = useState<any[]>([]);
-  const [monthly, setMonthly] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currentMonthName, setCurrentMonthName] = useState('');
-  const supabase = createClientComponentClient<Database>();
+// Mock monthly leaderboard data
+const monthlyLeaderboard = [
+  { id: '1', name: 'Jake', score: 42, isWinner: true },
+  { id: '2', name: 'Annika', score: 45, isWinner: false },
+  { id: '3', name: 'Rory', score: 47, isWinner: false },
+  { id: '4', name: 'Lexi', score: 48, isWinner: false },
+];
+const currentMonth = 'June, 24';
 
-  useEffect(() => {
-    const fetchLeaderboards = async () => {
-      setLoading(true);
-      console.log('Fetching leaderboards...');
-      
-      // Set current month name
-      const now = new Date();
-      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'];
-      setCurrentMonthName(monthNames[now.getMonth()]);
-      
-      // Fetch all-time leaderboard
-      const { data: allTimeData, error: allTimeError } = await supabase.rpc('get_all_time_leaderboard');
-      if (allTimeError) {
-        console.error('Error fetching all-time leaderboard:', allTimeError);
-      } else {
-        console.log('All-time leaderboard data:', allTimeData);
-      }
-      setAllTime(allTimeData || []);
+// Mock all-time leaderboard data
+const allTimeLeaderboard = [
+  { id: '1', name: 'Jake', score: 420 },
+  { id: '2', name: 'Annika', score: 450 },
+  { id: '3', name: 'Rory', score: 470 },
+  { id: '4', name: 'Lexi', score: 480 },
+];
 
-      // Fetch monthly leaderboard with total scores instead of average
-      const year = now.getFullYear();
-      const month = now.getMonth() + 1;
-      console.log(`Fetching monthly leaderboard for ${year}-${month}...`);
-      
-      // Get monthly total scores directly from scores table
-      const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
-      const endDate = new Date(year, month, 0).toISOString().split('T')[0]; // Last day of month
-      
-      const { data: monthlyScores, error: monthlyError } = await supabase
-        .from('scores')
-        .select(`
-          user_id,
-          raw_score,
-          profiles (
-            id,
-            display_name
-          )
-        `)
-        .gte('puzzle_date', startDate)
-        .lte('puzzle_date', endDate);
-
-      if (monthlyError) {
-        console.error('Error fetching monthly scores:', monthlyError);
-        setMonthly([]);
-      } else {
-        // Group by user and calculate total scores
-        const userTotals = new Map();
-        
-        monthlyScores?.forEach(score => {
-          const userId = score.user_id;
-          const userName = (score.profiles as any)?.display_name || 'Unknown';
-          
-          if (!userTotals.has(userId)) {
-            userTotals.set(userId, {
-              id: userId,
-              display_name: userName,
-              score: 0
-            });
-          }
-          
-          userTotals.get(userId).score += score.raw_score;
-        });
-        
-        // Convert to array and sort by total score
-        const monthlyData = Array.from(userTotals.values())
-          .sort((a, b) => a.score - b.score);
-        
-        console.log('Monthly leaderboard data:', monthlyData);
-        setMonthly(monthlyData);
-      }
-      
-      setLoading(false);
-    };
-    fetchLeaderboards();
-  }, [supabase]);
-
+export default function DevLeaderboardPage() {
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] p-4">
       <div className="max-w-4xl mx-auto">
@@ -180,56 +173,55 @@ export default function LeaderboardPage() {
         <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-4 md:p-6 mb-6 border border-[hsl(var(--border))]">
           <h2 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-4">All Time Leaderboard</h2>
           <div className="divide-y divide-[hsl(var(--border))]">
+            {/* Header Row */}
             <div className="flex items-center py-2 px-2 font-bold text-[hsl(var(--muted-foreground))] text-xs md:text-sm">
               <div className="w-10 text-left">Pos</div>
               <div className="flex-1 text-left pl-2">Name</div>
               <div className="w-16 text-right">Today</div>
             </div>
-            {loading ? (
-              <div className="text-center py-8">Loading...</div>
-            ) : (
-              allTime.map((player, idx) => {
-                let pos: string = String(idx + 1);
-                const nameClass = idx < 3 ? 'text-[#6aaa64] font-semibold' : 'text-[hsl(var(--foreground))]';
-                return (
-                  <div key={player.id} className="flex items-center py-4 px-2 bg-[hsl(var(--muted))] rounded-xl my-2 shadow-sm">
-                    <div className="w-10 text-left font-bold text-base md:text-lg">{pos}</div>
-                    <div className="flex-1 flex items-center pl-2">
-                      <img src={player.avatar_url || '/golf/jake-avatar.jpg'} alt={player.display_name} className="w-10 h-10 rounded-full border-2 border-[hsl(var(--primary))] mr-2" />
-                      <div className="flex flex-col justify-center">
-                        <span className={`truncate text-base md:text-lg ${nameClass} mb-0.5`} style={{lineHeight: '1.1'}}>{player.display_name}</span>
-                        <span className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">HCP {Number(player.handicap).toFixed(1)}</span>
-                      </div>
+            {/* Player Rows */}
+            {leaderboard.map((player, idx) => {
+              // Find ties
+              let pos: string = String(idx + 1);
+              if (idx > 0 && leaderboard[idx].today === leaderboard[idx - 1].today) {
+                pos = `T${idx}`;
+              }
+              // Green for top 3
+              const nameClass = idx < 3 ? 'text-[#6aaa64] font-semibold' : 'text-[hsl(var(--foreground))]';
+              return (
+                <div key={player.id} className="flex items-center py-4 px-2 bg-[hsl(var(--muted))] rounded-xl my-2 shadow-sm">
+                  <div className="w-10 text-left font-bold text-base md:text-lg">{pos}</div>
+                  <div className="flex-1 flex items-center pl-2">
+                    <img src={player.avatar} alt={player.name} className="w-10 h-10 rounded-full border-2 border-[hsl(var(--primary))] mr-2" />
+                    <div className="flex flex-col justify-center">
+                      <span className={`truncate text-base md:text-lg ${nameClass} mb-0.5`} style={{lineHeight: '1.1'}}>{player.name}</span>
+                      <span className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">HCP {player.handicap}</span>
                     </div>
-                    <div className="w-16 text-right text-2xl">{scoreToEmoji[player.today]}</div>
                   </div>
-                );
-              })
-            )}
+                  <div className="w-16 text-right text-2xl">{scoreToEmoji[player.today]}</div>
+                </div>
+              );
+            })}
           </div>
         </div>
         <div className="mb-8">
-          <h2 className="text-xl font-bold mb-2">Monthly Leaderboard - {currentMonthName}</h2>
-          <table className="w-full text-left mb-2 cursor-pointer" onClick={() => window.location.href = '/golf/leaderboard/monthly'}>
+          <h2 className="text-xl font-bold mb-2">Monthly Leaderboard</h2>
+          <table className="w-full text-left mb-2">
             <thead>
               <tr>
-                <th className="py-1">Pos</th>
                 <th className="py-1">Name</th>
                 <th className="py-1">Score</th>
+                <th className="py-1">Badge</th>
               </tr>
             </thead>
             <tbody>
-              {loading ? (
-                <tr><td colSpan={3} className="text-center py-4">Loading...</td></tr>
-              ) : (
-                monthly.map((player, idx) => (
-                  <tr key={player.id}>
-                    <td className="py-1">{idx + 1}</td>
-                    <td className="py-1">{player.display_name}</td>
-                    <td className="py-1">{player.score}</td>
-                  </tr>
-                ))
-              )}
+              {monthlyLeaderboard.map(player => (
+                <tr key={player.id}>
+                  <td className="py-1">{player.name}</td>
+                  <td className="py-1">{player.score}</td>
+                  <td className="py-1">{player.isWinner && <span className="bg-yellow-300 text-yellow-900 px-2 py-1 rounded text-xs font-semibold">{currentMonth}</span>}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

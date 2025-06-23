@@ -7,45 +7,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { getUserGroups } from '../../../lib/groups';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Database } from '../../../src/types/supabase';
-
-const navLinks = [
-  { href: '/golf/homepage', label: 'Home' },
-  { href: '/golf/leaderboard', label: 'Leaderboard' },
-  { href: '/golf/player', label: 'Player Card' },
-  { href: '/golf/tournaments', label: 'Tournaments' },
-  { href: '/golf/submit', label: 'Submit Score' },
-  { href: '/golf/clubhouse', label: 'Clubhouse' },
-  { href: '/golf/clubhouse/admin-working', label: 'Admin Center' },
-];
-
-function BurgerMenu() {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="relative">
-      <button
-        className="p-2 rounded-md bg-[hsl(var(--card))] border border-[hsl(var(--border))] shadow-md"
-        onClick={() => setOpen(!open)}
-        aria-label="Open navigation menu"
-      >
-        {open ? <X size={28} /> : <Menu size={28} />}
-      </button>
-      {open && (
-        <div className="absolute right-0 top-12 w-48 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg shadow-lg z-50 flex flex-col">
-          {navLinks.map(link => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="px-4 py-3 border-b border-[hsl(var(--border))] last:border-b-0 text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] font-semibold text-base transition"
-              onClick={() => setOpen(false)}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+import Navigation from '../../../components/Navigation';
 
 function WordleHeader({ label }: { label: string }) {
   const colors = ['bg-[#6aaa64]', 'bg-[#c9b458]', 'bg-[#787c7e]'];
@@ -64,368 +26,210 @@ function WordleHeader({ label }: { label: string }) {
   );
 }
 
-// Simple date formatter for 'Month YYYY'
-function formatJoinDate(dateString) {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return date.toLocaleString('default', { month: 'long', year: 'numeric' });
-}
-
-type TournamentWin = {
-  type: 'gold' | 'silver' | 'bronze';
-  date: string;
-  name: string;
-};
-
-export default function DevPlayerCardPage() {
-  const [displayName, setDisplayName] = useState('Jake Vogter');
-  const [editingName, setEditingName] = useState(false);
-  const [profilePic, setProfilePic] = useState('/golf/jake-avatar.jpg');
-  const [handicap, setHandicap] = useState<string>('');
-  const [bio, setBio] = useState('');
-  const [groups, setGroups] = useState([]);
-  const { user, loading: authLoading, supabase } = useAuth();
-  const [tournamentWins, setTournamentWins] = useState<TournamentWin[]>([]);
-  const [monthlyWins, setMonthlyWins] = useState<{ year: number; month: number }[]>([]);
+export default function PlayerPage() {
+  const { user } = useAuth();
   const [profile, setProfile] = useState<any>(null);
-  const [birthMonth, setBirthMonth] = useState<number | null>(null);
-  const [birthDay, setBirthDay] = useState<number | null>(null);
-  const [editingBirthday, setEditingBirthday] = useState(false);
+  const [handicap, setHandicap] = useState(0);
+  const [groups, setGroups] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClientComponentClient<Database>();
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) return;
-      const { data, error } = await supabase
+    console.log('🔄 useEffect triggered, user:', user?.email || 'null');
+    if (user) {
+      fetchPlayerData();
+    }
+  }, [user]);
+
+  const fetchPlayerData = async () => {
+    try {
+      console.log('🔍 Starting fetchPlayerData...');
+      
+      // Fetch profile
+      console.log('📋 Fetching profile data...');
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', user?.id)
         .single();
-      if (!error && data) {
-        setProfile(data);
-        setDisplayName(data.display_name || '');
-        setBio(data.bio || '');
-        setBirthMonth(data.birth_month);
-        setBirthDay(data.birth_day);
-        if (data.avatar_url) setProfilePic(data.avatar_url);
-      }
-    };
-    if (!authLoading && user) {
-      fetchProfile();
-      getUserGroups(supabase).then(setGroups);
-    }
-  }, [user, authLoading, supabase]);
 
-  useEffect(() => {
-    const fetchTournamentWins = async () => {
-      if (!user) return;
-      // Fetch all tournaments where user finished 1st, 2nd, or 3rd
-      const { data, error } = await supabase
-        .from('tournament_participants')
-        .select(`final_position, tournaments (name, start_date)`)
-        .eq('user_id', user.id)
-        .in('final_position', [1, 2, 3]);
-      if (!error && data) {
-        setTournamentWins(data.map((win: any) => ({
-          type: win.final_position === 1 ? 'gold' : win.final_position === 2 ? 'silver' : 'bronze',
-          date: win.tournaments && typeof win.tournaments === 'object' && 'start_date' in win.tournaments ? formatJoinDate(win.tournaments.start_date) : '',
-          name: win.tournaments && typeof win.tournaments === 'object' && 'name' in win.tournaments ? win.tournaments.name : '',
-        })));
+      if (profileData) {
+        console.log('✅ Profile data loaded successfully');
+        setProfile(profileData);
+      } else {
+        console.log('⚠️ No profile data found');
       }
-    };
-    fetchTournamentWins();
-  }, [user]);
 
-  useEffect(() => {
-    const fetchMonthlyWins = async () => {
-      if (!user) return;
-      const { data, error } = await supabase
-        .from('monthly_winners')
-        .select('year, month')
-        .eq('user_id', user.id);
-      if (!error && data) {
-        setMonthlyWins(data);
+      // Fetch handicap from all-time leaderboard function
+      console.log('🏌️ Fetching handicap data via RPC...');
+      const { data: leaderboardData, error: handicapError } = await supabase.rpc('get_all_time_leaderboard');
+      if (!handicapError && leaderboardData) {
+        console.log('✅ Handicap RPC completed successfully');
+        const userHandicap = leaderboardData.find((player: any) => player.id === user?.id);
+        if (userHandicap) {
+          console.log('✅ User handicap found:', userHandicap.handicap);
+          setHandicap(userHandicap.handicap || 0);
+        } else {
+          console.log('⚠️ User not found in handicap data');
+        }
+      } else {
+        console.log('❌ Handicap RPC failed:', handicapError);
       }
-    };
-    fetchMonthlyWins();
-  }, [user]);
 
-  useEffect(() => {
-    const fetchHandicap = async () => {
-      if (!user) return;
-      // Fetch last 20 scores for the user
-      const { data: scores, error } = await supabase
+      // Fetch groups
+      console.log('👥 Fetching groups data...');
+      const groupsData = await getUserGroups(supabase);
+      console.log('✅ Groups data loaded:', groupsData?.length || 0, 'groups');
+      setGroups(groupsData || []);
+
+      // Fetch basic stats
+      console.log('📊 Fetching scores for stats...');
+      const { data: scoresData } = await supabase
         .from('scores')
-        .select('raw_score')
-        .eq('user_id', user.id)
-        .order('puzzle_date', { ascending: false })
-        .limit(20);
-      if (error || !scores) {
-        setHandicap('N/A');
-        return;
-      }
-      // USGA: handicap = (average of best 8 differentials) * 0.96
-      // For Wordle Golf, let's use raw_score as the differential
-      const sorted = scores.map(s => s.raw_score).sort((a, b) => a - b);
-      const best8 = sorted.slice(0, 8);
-      if (best8.length < 1) {
-        setHandicap('N/A');
-        return;
-      }
-      const avg = best8.reduce((sum, s) => sum + s, 0) / best8.length;
-      const usgaHandicap = avg * 0.96;
-      setHandicap(usgaHandicap > 0 ? `+${usgaHandicap.toFixed(1)}` : usgaHandicap.toFixed(1));
-    };
-    fetchHandicap();
-  }, [user]);
-
-  // Profile pic upload handler
-  const handlePicUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.size <= 5 * 1024 * 1024) {
-      const url = URL.createObjectURL(file);
-      setProfilePic(url);
-    } else if (file) {
-      alert('File must be 5MB or less.');
-    }
-  };
-
-  const handleUpdateDisplayName = async () => {
-    if (!displayName.trim() || !user) return;
-    const { error } = await supabase
-      .from('profiles')
-      .update({ display_name: displayName.trim() })
-      .eq('id', user.id);
-    if (!error) {
-      const { data } = await supabase
-        .from('profiles')
         .select('*')
-        .eq('id', user.id)
-        .single();
-      if (data) {
-        setProfile(data);
-        setDisplayName(data.display_name || '');
+        .eq('user_id', user?.id);
+
+      if (scoresData) {
+        console.log('✅ Scores data loaded:', scoresData.length, 'scores');
+        const totalScores = scoresData.length;
+        const avgScore = totalScores > 0 ? scoresData.reduce((sum, score) => sum + score.raw_score, 0) / totalScores : 0;
+        const holeInOnes = scoresData.filter(s => s.raw_score === 1).length;
+        const eagles = scoresData.filter(s => s.raw_score === 2).length;
+        const birdies = scoresData.filter(s => s.raw_score === 3).length;
+        const pars = scoresData.filter(s => s.raw_score === 4).length;
+        const bogeys = scoresData.filter(s => s.raw_score === 5).length;
+        const doubleBogeys = scoresData.filter(s => s.raw_score === 6).length;
+        const failed = scoresData.filter(s => s.raw_score === 7).length;
+
+        setStats({
+          totalScores,
+          avgScore: avgScore.toFixed(2),
+          holeInOnes,
+          eagles,
+          birdies,
+          pars,
+          bogeys,
+          doubleBogeys,
+          failed
+        });
+        console.log('✅ Stats calculated successfully');
+      } else {
+        console.log('⚠️ No scores data found');
       }
-      setEditingName(false);
+      
+      console.log('🎉 fetchPlayerData completed successfully');
+    } catch (error) {
+      console.error('❌ Error in fetchPlayerData:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleUpdateBirthday = async () => {
-    if (!user || !birthMonth || !birthDay) return;
-    
-    const { error } = await supabase
-      .from('profiles')
-      .update({ 
-        birth_month: birthMonth,
-        birth_day: birthDay
-      })
-      .eq('id', user.id);
-    
-    if (!error) {
-      setEditingBirthday(false);
-      // Trigger birthday tournament check
-      const { checkAndCreateBirthdayTournaments } = await import('../../../lib/tournaments');
-      checkAndCreateBirthdayTournaments(supabase).catch(console.error);
-    }
-  };
-
-  const formatBirthday = () => {
-    if (!birthMonth || !birthDay) return 'Not set';
-    const date = new Date(2000, birthMonth - 1, birthDay);
-    return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-  };
-
-  const getDaysInMonth = (month: number) => {
-    return new Date(2000, month, 0).getDate();
-  };
-
-  const handleUpdateBio = async () => {
-    if (!user) return;
-    
-    const { error } = await supabase
-      .from('profiles')
-      .update({ bio: bio.trim() })
-      .eq('id', user.id);
-    
-    if (!error) {
-      // Optionally show a success message
-      console.log('Bio updated successfully');
-    }
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[hsl(var(--background))] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#6aaa64] mx-auto mb-4"></div>
+          <p className="text-[hsl(var(--muted-foreground))]">Loading player data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] p-4">
-      <div className="max-w-2xl mx-auto">
-        <nav className="bg-[hsl(var(--card))] shadow-sm px-4 py-2 flex justify-between items-center border-b border-[hsl(var(--border))] mb-4">
-          <Link href="/golf/player" className="flex items-center space-x-3">
-            <div className="relative">
-              <img
-                src={profilePic}
-                alt={displayName}
-                className="w-12 h-12 rounded-full border-2 border-[hsl(var(--primary))] object-cover"
-              />
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[hsl(var(--primary))] rounded-full border-2 border-[hsl(var(--card))]" />
-            </div>
-          </Link>
-          <div className="flex-1 flex justify-center">
-            <Link href="/golf/homepage" className="bg-[#6aaa64] text-white px-6 py-2 rounded-full font-bold shadow hover:bg-[#599a5b] transition">Home</Link>
-          </div>
-          <div className="flex items-center justify-end">
-            <BurgerMenu />
-          </div>
-        </nav>
-        <WordleHeader label="PLAYER CARD" />
-        <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-8 border border-[hsl(var(--border))] text-center">
-          <div className="mb-6 flex flex-col items-center">
-            <div className="w-24 h-24 rounded-full mx-auto bg-[#6aaa64] flex items-center justify-center text-white text-3xl font-bold border-4 border-[hsl(var(--border))] overflow-hidden mb-2">
-              <img src={profilePic} alt={displayName} className="w-full h-full object-cover" />
-            </div>
-            <label className="block text-xs text-[hsl(var(--muted-foreground))] mb-2 cursor-pointer">
-              <input type="file" accept="image/*" className="hidden" onChange={handlePicUpload} />
-              Change Profile Picture (max 5MB)
-            </label>
-            <div className="flex items-center justify-center gap-2">
-              {editingName ? (
-                <input
-                  className="border rounded-md px-2 py-1 text-lg font-bold text-center"
-                  value={displayName}
-                  onChange={e => setDisplayName(e.target.value)}
-                  onBlur={handleUpdateDisplayName}
-                  autoFocus
-                />
-              ) : (
-                <h2
-                  className="text-2xl font-bold text-[hsl(var(--foreground))] mt-2 mb-2 cursor-pointer"
-                  onClick={() => setEditingName(true)}
-                  title="Click to edit name"
-                >
-                  {displayName}
-                </h2>
-              )}
-            </div>
-            <p className="text-[hsl(var(--muted-foreground))]">Handicap: {handicap}</p>
-          </div>
-          <div className="mb-6">
-            {/* Tournament Winner Badges (real data) */}
-            {tournamentWins.length > 0 && (
-              <>
-                <h2 className="text-xl font-semibold mt-8 mb-2">Tournament Winner Badges</h2>
-                <div className="flex gap-2 mb-4">
-                  {tournamentWins.map((badge, i) => (
-                    <span key={i} className="bg-gray-100 rounded px-3 py-1 text-lg flex items-center gap-1">
-                      {badge.type === 'gold' && '🥇'}
-                      {badge.type === 'silver' && '🥈'}
-                      {badge.type === 'bronze' && '🥉'}
-                      {badge.date}
-                    </span>
-                  ))}
-                </div>
-              </>
-            )}
-            {/* Monthly Winner Badges (real data) */}
-            {monthlyWins.length > 0 && (
-              <>
-                <h2 className="text-xl font-semibold mb-2">Monthly Winner Badges</h2>
-                <div className="flex gap-2 mb-4">
-                  {monthlyWins.map((win, i) => {
-                    const date = new Date(win.year, win.month - 1);
-                    const label = `${date.toLocaleString('default', { month: 'long' })} '${String(win.year).slice(-2)}`;
-                    return (
-                      <span key={i} className="bg-yellow-200 rounded px-3 py-1 text-sm font-semibold flex items-center gap-1">
-                        🥇 {label}
-                      </span>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </div>
-          <div className="text-left">
-            <div className="flex flex-col gap-2 mt-4">
-              <div><span className="font-semibold">Joined:</span> {user?.created_at ? formatJoinDate(user.created_at) : ''}</div>
-              
-              {/* Birthday Section */}
-              <div className="flex items-center gap-2">
-                <span className="font-semibold">Birthday:</span>
-                {editingBirthday ? (
-                  <div className="flex items-center gap-2">
-                    <select 
-                      value={birthMonth || ''} 
-                      onChange={e => setBirthMonth(Number(e.target.value))}
-                      className="border rounded px-2 py-1 text-sm"
-                    >
-                      <option value="">Month</option>
-                      {Array.from({length: 12}, (_, i) => (
-                        <option key={i+1} value={i+1}>
-                          {new Date(2000, i, 1).toLocaleDateString('en-US', { month: 'long' })}
-                        </option>
-                      ))}
-                    </select>
-                    <select 
-                      value={birthDay || ''} 
-                      onChange={e => setBirthDay(Number(e.target.value))}
-                      className="border rounded px-2 py-1 text-sm"
-                      disabled={!birthMonth}
-                    >
-                      <option value="">Day</option>
-                      {birthMonth && Array.from({length: getDaysInMonth(birthMonth)}, (_, i) => (
-                        <option key={i+1} value={i+1}>{i+1}</option>
-                      ))}
-                    </select>
-                    <button 
-                      onClick={handleUpdateBirthday}
-                      className="bg-green-500 text-white px-2 py-1 rounded text-sm hover:bg-green-600"
-                      disabled={!birthMonth || !birthDay}
-                    >
-                      Save
-                    </button>
-                    <button 
-                      onClick={() => setEditingBirthday(false)}
-                      className="bg-gray-500 text-white px-2 py-1 rounded text-sm hover:bg-gray-600"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[hsl(var(--muted-foreground))]">{formatBirthday()}</span>
-                    <button 
-                      onClick={() => setEditingBirthday(true)}
-                      className="text-blue-500 hover:text-blue-700 text-sm"
-                    >
-                      {birthMonth && birthDay ? 'Edit' : 'Set Birthday'}
-                    </button>
-                  </div>
-                )}
-              </div>
+      <div className="max-w-4xl mx-auto">
+        {/* Use the new Navigation component with global context */}
+        <Navigation 
+          context="global" 
+          centerLink={{
+            href: "/golf/homepage",
+            label: "Home"
+          }}
+        />
 
+        <WordleHeader label="PLAYER CARD" />
+
+        {/* Profile Section */}
+        <div className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md mb-6">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-16 h-16 bg-[#6aaa64] rounded-full flex items-center justify-center text-white font-bold text-xl">
+              {profile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
             </div>
-            <div className="mb-2">
-              <span className="font-semibold">Player Bio:</span>
-              <textarea 
-                className="w-full mt-1 p-2 border border-[hsl(var(--border))] rounded-md bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] resize-none" 
-                rows={3} 
-                placeholder="Write something about yourself..." 
-                value={bio} 
-                onChange={e => setBio(e.target.value)}
-                onBlur={handleUpdateBio}
-              />
-              <div className="text-xs text-gray-500 mt-1">Bio saves automatically when you click outside the text area</div>
+            <div>
+              <h2 className="text-2xl font-bold text-[hsl(var(--foreground))]">
+                {profile?.display_name || user?.email}
+              </h2>
+              <p className="text-[hsl(var(--muted-foreground))]">
+                Handicap: {handicap > 0 ? `+${handicap.toFixed(1)}` : handicap.toFixed(1)}
+              </p>
             </div>
           </div>
         </div>
+
+        {/* Stats Section */}
+        {stats && (
+          <div className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md mb-6">
+            <h3 className="text-xl font-bold text-[hsl(var(--foreground))] mb-4">Statistics</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-[#6aaa64]">{stats.totalScores}</div>
+                <div className="text-sm text-[hsl(var(--muted-foreground))]">Total Rounds</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-[#6aaa64]">{stats.avgScore}</div>
+                <div className="text-sm text-[hsl(var(--muted-foreground))]">Average Score</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-[#c9b458]">{stats.eagles}</div>
+                <div className="text-sm text-[hsl(var(--muted-foreground))]">Eagles</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-[#6aaa64]">{stats.birdies}</div>
+                <div className="text-sm text-[hsl(var(--muted-foreground))]">Birdies</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-[#787c7e]">{stats.pars}</div>
+                <div className="text-sm text-[hsl(var(--muted-foreground))]">Pars</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-[#787c7e]">{stats.bogeys}</div>
+                <div className="text-sm text-[hsl(var(--muted-foreground))]">Bogeys</div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Groups Section */}
-        <div className="mt-10">
-          <h3 className="text-lg font-bold text-[hsl(var(--foreground))] mb-4">Groups</h3>
-          {groups.length === 0 ? (
-            <div className="text-[hsl(var(--muted-foreground))]">You are not in any groups yet.</div>
-          ) : (
-            <div className="grid md:grid-cols-2 gap-6">
-              {groups.map(group => (
-                <Link key={group.id} href={`/golf/clubhouse/${group.id}`} className="bg-[hsl(var(--muted))] rounded-lg shadow-md p-4 flex flex-col items-center hover:bg-[hsl(var(--accent))] transition border border-[hsl(var(--border))]">
-                  <div className="font-semibold text-base mb-2 text-[hsl(var(--foreground))]">{group.name}</div>
-                  <span className="text-xs text-[hsl(var(--muted-foreground))]">{group.member_count || 0} members</span>
-                </Link>
+        <div className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md">
+          <h3 className="text-xl font-bold text-[hsl(var(--foreground))] mb-4">Your Groups</h3>
+          {groups.length > 0 ? (
+            <div className="grid gap-3">
+              {groups.map((group: any) => (
+                <div key={group.id} className="flex items-center justify-between p-3 border border-[hsl(var(--border))] rounded-lg">
+                  <div>
+                    <h4 className="font-semibold text-[hsl(var(--foreground))]">{group.name}</h4>
+                    <p className="text-sm text-[hsl(var(--muted-foreground))]">Code: {group.invite_code}</p>
+                  </div>
+                  <Link
+                    href={`/golf/${group.id}/dashboard`}
+                    className="bg-[#6aaa64] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#599a5b] transition"
+                  >
+                    Enter
+                  </Link>
+                </div>
               ))}
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <p className="text-[hsl(var(--muted-foreground))] mb-4">You haven't joined any groups yet.</p>
+              <Link
+                href="/golf/clubhouse"
+                className="bg-[#6aaa64] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[#599a5b] transition"
+              >
+                Join a Group
+              </Link>
             </div>
           )}
         </div>

@@ -43,14 +43,14 @@ export default function SubmitPage() {
 
   const getGolfScore = (attempts: number): { score: string; rawScore: number } => {
     switch (attempts) {
-      case 1: return { score: 'Hole in One', rawScore: -3 }
-      case 2: return { score: 'Eagle', rawScore: -2 }
-      case 3: return { score: 'Birdie', rawScore: -1 }
-      case 4: return { score: 'Par', rawScore: 0 }
-      case 5: return { score: 'Bogey', rawScore: 1 }
-      case 6: return { score: 'Double Bogey', rawScore: 2 }
+      case 1: return { score: 'Hole in One', rawScore: 1 }
+      case 2: return { score: 'Eagle', rawScore: 2 }
+      case 3: return { score: 'Birdie', rawScore: 3 }
+      case 4: return { score: 'Par', rawScore: 4 }
+      case 5: return { score: 'Bogey', rawScore: 5 }
+      case 6: return { score: 'Double Bogey', rawScore: 6 }
       case 7: return { score: 'Failed (7 attempts)', rawScore: 7 }
-      default: return { score: 'Invalid', rawScore: 10 }
+      default: return { score: 'Invalid', rawScore: 7 }
     }
   }
 

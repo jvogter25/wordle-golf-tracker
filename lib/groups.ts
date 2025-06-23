@@ -9,6 +9,11 @@ export async function createGroup(client: SupabaseClient, name: string, descript
   const user = await client.auth.getUser()
   if (!user.data.user) throw new Error('Not authenticated')
   
+  // Restrict group creation to admin only
+  if (user.data.user.email !== 'jakevogt25@gmail.com') {
+    throw new Error('Only administrators can create groups')
+  }
+  
   const inviteCode = generateInviteCode()
   
   // Create group with direct approach (RLS is disabled)
@@ -195,4 +200,33 @@ export async function deleteGroup(client: SupabaseClient, groupId: string) {
   if (groupError) throw groupError
   
   return true
+}
+
+export async function updateGroup(client: SupabaseClient, groupId: string, updates: { name?: string, description?: string }) {
+  const user = await client.auth.getUser()
+  if (!user.data.user) throw new Error('Not authenticated')
+  
+  // Check if user is admin of the group
+  const { data: membership, error: memberError } = await client
+    .from('group_members')
+    .select('role')
+    .eq('group_id', groupId)
+    .eq('user_id', user.data.user.id)
+    .single()
+  
+  if (memberError || !membership || membership.role !== 'admin') {
+    throw new Error('Only group admins can update groups')
+  }
+  
+  // Update the group
+  const { data: group, error: groupError } = await client
+    .from('groups')
+    .update(updates)
+    .eq('id', groupId)
+    .select()
+    .single()
+  
+  if (groupError) throw groupError
+  
+  return group
 } 

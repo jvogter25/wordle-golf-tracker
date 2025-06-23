@@ -4,6 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import Head from 'next/head';
+import NavigationAvatar from '../../../components/NavigationAvatar';
+import Navigation from '../../../components/Navigation';
 
 const wordleTiles = [
   { letter: 'L', color: 'bg-[#6aaa64]' }, // green
@@ -18,45 +20,6 @@ const wordleTiles = [
   { letter: 'R', color: 'bg-[#6aaa64]' }, // green
   { letter: 'D', color: 'bg-[#c9b458]' }, // yellow
 ];
-
-const navLinks = [
-  { href: '/golf/homepage', label: 'Home' },
-  { href: '/golf/leaderboard', label: 'Leaderboard' },
-  { href: '/golf/player', label: 'Player Card' },
-  { href: '/golf/tournaments', label: 'Tournaments' },
-  { href: '/golf/submit', label: 'Submit Score' },
-  { href: '/golf/clubhouse', label: 'Clubhouse' },
-  { href: '/golf/clubhouse/admin-working', label: 'Admin Center' },
-];
-
-function BurgerMenu() {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="relative">
-      <button
-        className="p-2 rounded-md bg-[hsl(var(--card))] border border-[hsl(var(--border))] shadow-md"
-        onClick={() => setOpen(!open)}
-        aria-label="Open navigation menu"
-      >
-        {open ? <X size={28} /> : <Menu size={28} />}
-      </button>
-      {open && (
-        <div className="absolute right-0 top-12 w-48 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg shadow-lg z-50 flex flex-col">
-          {navLinks.map(link => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="px-4 py-3 border-b border-[hsl(var(--border))] last:border-b-0 text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] font-semibold text-base transition"
-              onClick={() => setOpen(false)}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function WordleHeader({ label }: { label: string }) {
   // Map label to Wordle tile colors in a repeating pattern
@@ -81,28 +44,8 @@ export default function GolfHomepage() {
 
   return (
     <div className="min-h-screen bg-[hsl(var(--background))]">
-      {/* Top Navigation Bar */}
-      <nav className="bg-[hsl(var(--card))] shadow-sm px-4 py-2 flex justify-between items-center border-b border-[hsl(var(--border))]">
-        {/* Profile Section */}
-        <Link href="/golf/player" className="flex items-center space-x-3">
-          <div className="relative">
-            <img
-              src="/golf/jake-avatar.jpg"
-              alt="Jake Vogter"
-              className="w-12 h-12 rounded-full border-2 border-[hsl(var(--primary))] object-cover"
-            />
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[hsl(var(--primary))] rounded-full border-2 border-[hsl(var(--card))]" />
-          </div>
-          <div className="hidden md:block">
-            <h2 className="font-semibold text-[hsl(var(--foreground))]">Jake Vogter</h2>
-            <p className="text-sm text-[hsl(var(--muted-foreground))]">Handicap: +1.2</p>
-          </div>
-        </Link>
-        <div className="flex-1" />
-        <div className="flex items-center justify-end">
-          <BurgerMenu />
-        </div>
-      </nav>
+      {/* Use the new Navigation component with global context */}
+      <Navigation context="global" />
 
       <div className="flex">
         {/* Sidebar - Hidden on mobile */}
@@ -111,14 +54,11 @@ export default function GolfHomepage() {
             <Link href="/golf/homepage" className="flex items-center space-x-3 px-4 py-2 bg-[hsl(var(--muted))] text-[hsl(var(--primary))] rounded-lg">
               <span>Dashboard</span>
             </Link>
-            <Link href="/golf/leaderboard" className="flex items-center space-x-3 px-4 py-2 text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg">
-              <span>Leaderboard</span>
-            </Link>
             <Link href="/golf/clubhouse" className="flex items-center space-x-3 px-4 py-2 text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg">
               <span>Clubhouse</span>
             </Link>
-            <Link href="/golf/submit" className="flex items-center space-x-3 px-4 py-2 text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg">
-              <span>Submit Score</span>
+            <Link href="/golf/profile" className="flex items-center space-x-3 px-4 py-2 text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg">
+              <span>Player Card</span>
             </Link>
           </nav>
         </aside>
@@ -131,14 +71,11 @@ export default function GolfHomepage() {
                 <Link href="/golf/homepage" className="flex items-center space-x-3 px-4 py-2 bg-[hsl(var(--muted))] text-[hsl(var(--primary))] rounded-lg">
                   <span>Dashboard</span>
                 </Link>
-                <Link href="/golf/leaderboard" className="flex items-center space-x-3 px-4 py-2 text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg">
-                  <span>Leaderboard</span>
-                </Link>
                 <Link href="/golf/clubhouse" className="flex items-center space-x-3 px-4 py-2 text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg">
                   <span>Clubhouse</span>
                 </Link>
-                <Link href="/golf/submit" className="flex items-center space-x-3 px-4 py-2 text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg">
-                  <span>Submit Score</span>
+                <Link href="/golf/profile" className="flex items-center space-x-3 px-4 py-2 text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg">
+                  <span>Player Card</span>
                 </Link>
               </nav>
             </div>

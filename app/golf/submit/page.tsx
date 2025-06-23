@@ -138,11 +138,9 @@ export default function DevSubmitScorePage() {
         <nav className="bg-[hsl(var(--card))] shadow-sm px-4 py-2 flex justify-between items-center border-b border-[hsl(var(--border))] mb-4">
           <Link href="/golf/player" className="flex items-center space-x-3">
             <div className="relative">
-              <img
-                src="/golf/jake-avatar.jpg"
-                alt="Jake Vogter"
-                className="w-12 h-12 rounded-full border-2 border-[hsl(var(--primary))] object-cover"
-              />
+              <div className="w-12 h-12 rounded-full border-2 border-[hsl(var(--primary))] bg-gray-100 flex items-center justify-center">
+                <span role="img" aria-label="avatar">👤</span>
+              </div>
               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[hsl(var(--primary))] rounded-full border-2 border-[hsl(var(--card))]" />
             </div>
           </Link>

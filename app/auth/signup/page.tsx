@@ -8,7 +8,6 @@ export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [password, setPassword] = useState('123456')
-  const [birthday, setBirthday] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -17,7 +16,7 @@ export default function SignupPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!email.trim() || !displayName.trim() || !birthday.trim()) {
+    if (!email.trim() || !displayName.trim()) {
       setMessage('Please fill in all fields')
       return
     }
@@ -32,7 +31,6 @@ export default function SignupPage() {
         options: {
           data: {
             display_name: displayName.trim(),
-            birthday: birthday.trim(),
           },
         },
       })
@@ -107,20 +105,7 @@ export default function SignupPage() {
             />
           </div>
 
-          <div>
-            <label htmlFor="birthday" className="block text-sm font-medium text-gray-700 mb-2">
-              Birthday
-            </label>
-            <input
-              id="birthday"
-              type="date"
-              value={birthday}
-              onChange={(e) => setBirthday(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              disabled={loading}
-              required
-            />
-          </div>
+
 
           {message && (
             <div className={`p-4 rounded-lg text-sm ${

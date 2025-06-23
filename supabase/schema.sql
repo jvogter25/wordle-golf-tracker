@@ -39,11 +39,14 @@ create table public.scores (
   user_id uuid references public.profiles(id) on delete cascade not null,
   group_id uuid references public.groups(id) on delete cascade not null,
   puzzle_date date not null,
+  puzzle_number integer not null,
   attempts integer not null check (attempts >= 1 and attempts <= 7),
   golf_score text not null,
   raw_score integer not null,
+  submitted_by_admin boolean default false,
   submitted_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  unique(user_id, group_id, puzzle_date)
+  updated_at timestamp with time zone default timezone('utc'::text, now()),
+  unique(user_id, group_id, puzzle_number)
 );
 
 -- Create handicaps table

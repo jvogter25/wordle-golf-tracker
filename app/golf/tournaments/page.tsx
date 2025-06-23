@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
-import { useAuth } from '../../../contexts/AuthContext';
-import { getUserGroups } from '../../../lib/groups';
 
 const navLinks = [
   { href: '/golf/homepage', label: 'Home' },
@@ -13,7 +11,6 @@ const navLinks = [
   { href: '/golf/tournaments', label: 'Tournaments' },
   { href: '/golf/submit', label: 'Submit Score' },
   { href: '/golf/clubhouse', label: 'Clubhouse' },
-  { href: '/golf/clubhouse/admin-working', label: 'Admin Center' },
 ];
 
 function BurgerMenu() {
@@ -62,6 +59,54 @@ function WordleHeader({ label }: { label: string }) {
   );
 }
 
+// Mock tournament data
+const tournaments = [
+  {
+    id: 'masters-2024',
+    name: 'The Masters',
+    type: 'major',
+    start: '2024-04-08',
+    end: '2024-04-14',
+    phase: 'qualifying', // 'qualifying', 'cut', 'tournament', 'finished'
+    participants: [
+      { id: '1', name: 'Jake', score: 12 },
+      { id: '2', name: 'Annika', score: 14 },
+      { id: '3', name: 'Rory', score: 15 },
+      { id: '4', name: 'Lexi', score: 16 },
+    ],
+    cutLine: 2, // index of last player to make the cut
+    birthdayUser: null,
+  },
+  {
+    id: 'jake-bday-2024',
+    name: "Jake's Birthday Week",
+    type: 'birthday',
+    start: '2024-06-10',
+    end: '2024-06-16',
+    phase: 'tournament',
+    participants: [
+      { id: '1', name: 'Jake', score: 10 },
+      { id: '2', name: 'Annika', score: 13 },
+      { id: '3', name: 'Rory', score: 14 },
+      { id: '4', name: 'Lexi', score: 15 },
+    ],
+    cutLine: 1,
+    birthdayUser: 'Jake',
+  },
+];
+
+function getTournamentPhase(tournament) {
+  // This would use real date logic in production
+  return tournament.phase;
+}
+
+function getEligiblePlayers(tournament) {
+  if (tournament.phase === 'tournament') {
+    return tournament.participants.slice(0, tournament.cutLine + 1);
+  }
+  return tournament.participants;
+}
+
 function formatDateRange(start, end) {
   const s = new Date(start);
   const e = new Date(end);
@@ -69,100 +114,13 @@ function formatDateRange(start, end) {
   return `${pad(s.getMonth()+1)}/${pad(s.getDate())} - ${pad(e.getMonth()+1)}/${pad(e.getDate())}`;
 }
 
-export default function TournamentsPage() {
-  const { user, loading: authLoading } = useAuth();
-  const { supabase } = useAuth();
-  const [groups, setGroups] = useState<any[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState('');
-  const [tournaments, setTournaments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState(null);
+function formatPhase(phase) {
+  if (phase === 'qualifying') return 'Qualifying';
+  if (phase === 'tournament') return 'Tournament';
+  return phase.charAt(0).toUpperCase() + phase.slice(1);
+}
 
-  useEffect(() => {
-    if (user) {
-      console.log('🏆 User loaded, fetching groups...');
-      getUserGroups(supabase)
-        .then(groups => {
-          console.log('🏆 Groups loaded:', groups);
-          setGroups(groups);
-        })
-        .catch(err => {
-          console.error('🏆 Groups error:', err);
-          setGroups([]);
-        });
-    }
-  }, [user]);
-
-  useEffect(() => {
-    console.log('🏆 Groups effect:', { groupsLength: groups.length, selectedGroup });
-    if (groups.length === 1 && selectedGroup === '') {
-      console.log('🏆 Setting selected group to:', groups[0].id);
-      setSelectedGroup(groups[0].id);
-    }
-    if (selectedGroup) {
-      console.log('🏆 Selected group set, fetching tournaments');
-      fetchTournaments();
-    }
-  }, [selectedGroup, groups]);
-
-  const fetchTournaments = async () => {
-    console.log('🏆 Fetching tournaments for group:', selectedGroup);
-    setLoading(true);
-    
-    try {
-      const { data, error } = await supabase
-        .from('tournaments')
-        .select('*')
-        .eq('year', new Date().getFullYear())
-        .eq('tournament_type', 'birthday')  // Only fetch birthday tournaments
-        .order('start_date', { ascending: true });
-      
-      console.log('🏆 Tournament data:', data);
-      console.log('🏆 Tournament error:', error);
-      
-      setTournaments(data || []);
-      setFetchError(error);
-    } catch (err) {
-      console.error('🏆 Tournament fetch error:', err);
-      setFetchError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Partition tournaments
-  const now = new Date();
-  const active = tournaments.filter(t => new Date(t.start_date) <= now && new Date(t.end_date) >= now && t.is_active);
-  const upcomingBirthdays = tournaments.filter(t => t.tournament_type === 'birthday' && new Date(t.start_date) > now);
-  const past = tournaments.filter(t => new Date(t.end_date) < now);
-
-  // Show next upcoming birthday tournament
-  const nextBirthday = upcomingBirthdays.length > 0 ? [upcomingBirthdays[0]] : [];
-
-  if (authLoading || loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Please sign in</h2>
-          <Link href="/auth/login" className="bg-primary-500 text-white px-6 py-3 rounded-lg hover:bg-primary-600">
-            Sign In
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
+export default function DevTournamentsPage() {
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] p-4">
       <div className="max-w-4xl mx-auto">
@@ -185,98 +143,41 @@ export default function TournamentsPage() {
           </div>
         </nav>
         <WordleHeader label="TOURNAMENTS" />
-        
-        <div className="mb-8">
-          {groups.length > 1 && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2">Select Group</label>
-              <select
-                className="p-2 border rounded"
-                value={selectedGroup}
-                onChange={e => setSelectedGroup(e.target.value)}
-              >
-                <option value="">Select a group</option>
-                {groups.map(g => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
-          
-          {/* Active Tournament Section */}
-          {active.length > 0 && (
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold mb-2">Active Tournament</h3>
-              {active.map(t => (
-                <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block mb-4">
-                  <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border-2 border-green-500 hover:shadow-lg transition">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="font-semibold text-lg">{t.name}</div>
-                      <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
-                    </div>
-                    <div className="text-sm text-[hsl(var(--muted-foreground))]">
-                      {t.tournament_type === 'birthday' ? '🎂 Birthday' : 'Major'}
-                    </div>
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold mb-4">Tournaments</h2>
+          <div className="grid gap-6">
+            {tournaments.map(t => (
+              <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block">
+                <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border border-[hsl(var(--border))] hover:shadow-lg transition">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="font-semibold text-lg">{t.name} {t.type === 'birthday' && <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Birthday</span>}</div>
+                    <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start, t.end)}</div>
                   </div>
-                </Link>
-              ))}
-            </div>
-          )}
-
-          {/* Upcoming Birthday Tournaments */}
-          {nextBirthday.length > 0 && (
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold mb-2">Upcoming Birthday Tournament</h3>
-              {nextBirthday.map(t => (
-                <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block mb-4">
-                  <div className="bg-[hsl(var(--card))] rounded-xl shadow p-6 border-2 border-yellow-400 hover:shadow-lg transition">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="font-semibold text-lg">{t.name}</div>
-                      <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
-                    </div>
-                    <div className="text-sm text-[hsl(var(--muted-foreground))]">
-                      🎂 Birthday
-                    </div>
-                    <div className="text-sm text-[hsl(var(--muted-foreground))] bg-yellow-50 px-3 py-2 rounded-lg mt-3">
-                      <span className="font-medium text-yellow-800">Birthday Tournament</span> - Special 0.5 stroke advantage for the birthday person!
-                    </div>
+                  <div className="mb-2 text-sm">Phase: <span className="font-bold">{formatPhase(getTournamentPhase(t))}</span></div>
+                  {t.birthdayUser && <div className="mb-2 text-xs text-green-700">🎂 {t.birthdayUser} gets -0.5 strokes/day</div>}
+                  <div className="mt-2">
+                    <div className="font-semibold mb-1">Leaderboard</div>
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr>
+                          <th className="py-1">Name</th>
+                          <th className="py-1">Score</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {getEligiblePlayers(t).map(p => (
+                          <tr key={p.id}>
+                            <td className="py-1">{p.name}</td>
+                            <td className="py-1">{p.score}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                </Link>
-              ))}
-            </div>
-          )}
-
-          {/* No Tournaments Message */}
-          {active.length === 0 && nextBirthday.length === 0 && (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">🎂</div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Active Tournaments</h3>
-              <p className="text-gray-600 mb-4">Birthday tournaments are created automatically when someone's birthday is coming up!</p>
-              <p className="text-sm text-gray-500">Make sure to set your birthday in your profile to participate in birthday tournaments.</p>
-            </div>
-          )}
-
-          {/* Past Tournaments */}
-          {past.length > 0 && (
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold mb-2">Past Tournaments</h3>
-              <div className="space-y-2">
-                {past.slice(0, 5).map(t => (
-                  <Link key={t.id} href={`/golf/tournaments/${t.id}`} className="block">
-                    <div className="bg-[hsl(var(--card))] rounded-lg shadow p-4 hover:shadow-md transition">
-                      <div className="flex items-center justify-between">
-                        <div className="font-medium">{t.name}</div>
-                        <div className="text-sm text-[hsl(var(--muted-foreground))]">{formatDateRange(t.start_date, t.end_date)}</div>
-                      </div>
-                      <div className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-                        {t.tournament_type === 'birthday' ? '🎂 Birthday' : 'Major'}
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
     </div>

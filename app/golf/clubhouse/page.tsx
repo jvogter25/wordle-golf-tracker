@@ -2,50 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Menu, X, Users, Settings, Plus } from 'lucide-react';
+import { Menu, X, Users, Settings, Plus, Edit3, Trash2 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useGroup } from '../../../contexts/GroupContext';
-import { joinGroupByCode } from '../../../lib/groups';
-import { toast } from 'sonner';
-
-const navLinks = [
-  { href: '/golf/homepage', label: 'Home' },
-  { href: '/golf/leaderboard', label: 'Leaderboard' },
-  { href: '/golf/player', label: 'Player Card' },
-  { href: '/golf/tournaments', label: 'Tournaments' },
-  { href: '/golf/submit', label: 'Submit Score' },
-  { href: '/golf/clubhouse', label: 'Clubhouse' },
-  { href: '/golf/clubhouse/admin-working', label: 'Admin Center' },
-];
-
-function BurgerMenu() {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="relative">
-      <button
-        className="p-2 rounded-md bg-[hsl(var(--card))] border border-[hsl(var(--border))] shadow-md"
-        onClick={() => setOpen(!open)}
-        aria-label="Open navigation menu"
-      >
-        {open ? <X size={28} /> : <Menu size={28} />}
-      </button>
-      {open && (
-        <div className="absolute right-0 top-12 w-48 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg shadow-lg z-50 flex flex-col">
-          {navLinks.map(link => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="px-4 py-3 border-b border-[hsl(var(--border))] last:border-b-0 text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] font-semibold text-base transition"
-              onClick={() => setOpen(false)}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+import { joinGroupByCode, createGroup, updateGroup, deleteGroup } from '../../../lib/groups';
+import NavigationAvatar from '../../../components/NavigationAvatar';
+import Navigation from '../../../components/Navigation';
 
 function WordleHeader({ label }: { label: string }) {
   const colors = ['bg-[#6aaa64]', 'bg-[#c9b458]', 'bg-[#787c7e]'];
@@ -65,200 +27,411 @@ function WordleHeader({ label }: { label: string }) {
 }
 
 export default function ClubhousePage() {
-  const { user } = useAuth();
-  const { availableGroups, selectedGroup, setSelectedGroup, loading, refreshGroups } = useGroup();
-  const { supabase } = useAuth();
-  const [showJoinForm, setShowJoinForm] = useState(false);
-  const [inviteCode, setInviteCode] = useState('');
-  const [joining, setJoining] = useState(false);
+  const { user, supabase } = useAuth();
+  const { selectedGroup, availableGroups, setSelectedGroup, refreshGroups } = useGroup();
+  const [joinCode, setJoinCode] = useState('');
+  const [isJoining, setIsJoining] = useState(false);
+  const [message, setMessage] = useState('');
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [showRenameGroup, setShowRenameGroup] = useState(false);
+  const [selectedGroupForRename, setSelectedGroupForRename] = useState<any>(null);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupDescription, setNewGroupDescription] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  const handleSelectGroup = (group: any) => {
-    setSelectedGroup(group);
-    toast.success(`Switched to ${group.name}`);
+  useEffect(() => {
+    if (user) {
+      refreshGroups();
+    }
+  }, [user, refreshGroups]);
+
+  const handleJoinGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!joinCode.trim() || !user || !supabase) return;
+
+    setIsJoining(true);
+    try {
+      await joinGroupByCode(supabase, joinCode.trim());
+      setMessage('Successfully joined group!');
+      setJoinCode('');
+      refreshGroups();
+    } catch (error: any) {
+      console.error('Error joining group:', error);
+      setMessage(error.message || 'Failed to join group');
+    } finally {
+      setIsJoining(false);
+    }
   };
 
-  const handleJoinGroup = async () => {
-    if (!inviteCode.trim()) {
-      toast.error('Please enter an invite code');
+  const handleCreateGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGroupName.trim() || !user || !supabase) return;
+
+    setIsCreating(true);
+    try {
+      const group = await createGroup(supabase, newGroupName.trim(), newGroupDescription.trim() || undefined);
+      setMessage('Group created successfully!');
+      setNewGroupName('');
+      setNewGroupDescription('');
+      setShowCreateGroup(false);
+      refreshGroups();
+      
+      // Auto-select the new group and navigate to it
+      setTimeout(() => {
+        setSelectedGroup(group);
+        window.location.href = `/golf/${group.id}/dashboard`;
+      }, 1000);
+    } catch (error: any) {
+      console.error('Error creating group:', error);
+      setMessage(error.message || 'Failed to create group');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleRenameGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGroupName.trim() || !selectedGroupForRename || !supabase) return;
+
+    setIsUpdating(true);
+    try {
+      await updateGroup(supabase, selectedGroupForRename.id, { 
+        name: newGroupName.trim(),
+        description: newGroupDescription.trim() || undefined 
+      });
+      setMessage('Group updated successfully!');
+      setNewGroupName('');
+      setNewGroupDescription('');
+      setShowRenameGroup(false);
+      setSelectedGroupForRename(null);
+      refreshGroups();
+    } catch (error: any) {
+      console.error('Error updating group:', error);
+      setMessage(error.message || 'Failed to update group');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDeleteGroup = async (group: any) => {
+    if (!confirm(`Are you sure you want to delete "${group.name}"? This action cannot be undone.`)) {
       return;
     }
 
-    setJoining(true);
+    if (!supabase) return;
+
     try {
-      await joinGroupByCode(supabase, inviteCode.trim());
-      toast.success('Successfully joined group!');
-      setInviteCode('');
-      setShowJoinForm(false);
-      await refreshGroups();
+      await deleteGroup(supabase, group.id);
+      setMessage('Group deleted successfully!');
+      refreshGroups();
+      
+      // If this was the selected group, clear selection
+      if (selectedGroup?.id === group.id) {
+        setSelectedGroup(null);
+      }
     } catch (error: any) {
-      toast.error(error.message || 'Failed to join group');
-    } finally {
-      setJoining(false);
+      console.error('Error deleting group:', error);
+      setMessage(error.message || 'Failed to delete group');
     }
   };
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-[hsl(var(--background))] flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-[hsl(var(--foreground))] mb-4">Please sign in</h2>
-          <Link href="/auth/login" className="bg-[#6aaa64] text-white px-6 py-3 rounded-lg hover:bg-[#599a5b] transition">
-            Sign In
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  const openRenameDialog = (group: any) => {
+    setSelectedGroupForRename(group);
+    setNewGroupName(group.name);
+    setNewGroupDescription(group.description || '');
+    setShowRenameGroup(true);
+  };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[hsl(var(--background))] flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#6aaa64] mx-auto mb-4"></div>
-          <p className="text-[hsl(var(--muted-foreground))]">Loading groups...</p>
-        </div>
-      </div>
-    );
-  }
+  const handleEnterGroup = (groupId: string) => {
+    const group = availableGroups.find(g => g.id === groupId);
+    if (group) {
+      setSelectedGroup(group);
+      // Navigate to group dashboard
+      window.location.href = `/golf/${groupId}/dashboard`;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] p-4">
       <div className="max-w-4xl mx-auto">
-        {/* Navigation Header */}
-        <nav className="bg-[hsl(var(--card))] shadow-sm px-4 py-2 flex justify-between items-center border-b border-[hsl(var(--border))] mb-4">
-          <Link href="/golf/player" className="flex items-center space-x-3">
-            <div className="relative">
-              <img
-                src="/golf/jake-avatar.jpg"
-                alt="Jake Vogter"
-                className="w-12 h-12 rounded-full border-2 border-[hsl(var(--primary))] object-cover"
-              />
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[hsl(var(--primary))] rounded-full border-2 border-[hsl(var(--card))]" />
-            </div>
-          </Link>
-          <div className="flex-1 flex justify-center">
-            <Link href="/golf/homepage" className="bg-[#6aaa64] text-white px-6 py-2 rounded-full font-bold shadow hover:bg-[#599a5b] transition">Home</Link>
-          </div>
-          <div className="flex items-center justify-end">
-            <BurgerMenu />
-          </div>
-        </nav>
+        {/* Use the new Navigation component with global context */}
+        <Navigation 
+          context="global" 
+          centerLink={{
+            href: "/golf/homepage",
+            label: "Home"
+          }}
+        />
 
         <WordleHeader label="CLUBHOUSE" />
 
+        {/* Message Display */}
+        {message && (
+          <div className={`p-4 rounded-lg mb-6 ${message.includes('Successfully') || message.includes('copied') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            {message}
+          </div>
+        )}
+
         {/* Current Group Display */}
         {selectedGroup && (
-          <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-6 border border-[hsl(var(--border))] mb-6">
+          <div className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md mb-6 border-2 border-[#6aaa64]">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-2">Currently Active</h2>
-                <div className="flex items-center gap-3">
-                  <Users className="text-[#6aaa64]" size={24} />
-                  <span className="text-lg font-medium text-[hsl(var(--foreground))]">{selectedGroup.name}</span>
-                </div>
+                <h2 className="text-xl font-bold text-[hsl(var(--foreground))] mb-2">
+                  Currently in: {selectedGroup.name}
+                </h2>
+                <p className="text-[hsl(var(--muted-foreground))]">
+                  Group code: {selectedGroup.invite_code}
+                </p>
               </div>
-              <Link 
-                href="/golf/clubhouse/admin-working"
-                className="flex items-center gap-2 px-4 py-2 bg-[#6aaa64] text-white rounded-lg hover:bg-[#599a5b] transition font-semibold"
+              <Link
+                href={`/golf/${selectedGroup.id}/dashboard`}
+                className="bg-[#6aaa64] text-white px-6 py-2 rounded-full font-bold shadow hover:bg-[#599a5b] transition"
               >
-                <Settings size={16} />
-                Manage
+                Enter Group
               </Link>
             </div>
           </div>
         )}
 
+        {/* Create Group Section */}
+        <div className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md mb-6">
+          <h2 className="text-xl font-bold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
+            <Plus size={24} />
+            Create New Group
+          </h2>
+          <p className="text-[hsl(var(--muted-foreground))] mb-4">
+            Start your own Wordle Golf group and invite friends and family to compete!
+          </p>
+          <button
+            onClick={() => setShowCreateGroup(true)}
+            className="bg-[#6aaa64] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[#599a5b] transition"
+          >
+            Create Group
+          </button>
+        </div>
+
+        {/* Join Group Section */}
+        <div className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md mb-6">
+          <h2 className="text-xl font-bold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
+            <Plus size={24} />
+            Join a Group
+          </h2>
+          <form onSubmit={handleJoinGroup} className="flex gap-3">
+            <input
+              type="text"
+              value={joinCode}
+              onChange={(e) => setJoinCode(e.target.value)}
+              placeholder="Enter group invite code"
+              className="flex-1 px-4 py-2 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[#6aaa64]"
+              disabled={isJoining}
+              required
+            />
+            <button
+              type="submit"
+              disabled={isJoining || !joinCode.trim()}
+              className="bg-[#6aaa64] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[#599a5b] transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isJoining ? 'Joining...' : 'Join'}
+            </button>
+          </form>
+        </div>
+
         {/* Available Groups */}
-        <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-6 border border-[hsl(var(--border))] mb-6">
-          <h2 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-4">Your Groups</h2>
+        <div className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-bold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
+            <Users size={24} />
+            Your Groups
+          </h2>
           
-          {availableGroups.length > 0 ? (
-            <div className="space-y-3">
-              {availableGroups.map(group => (
-                <div 
-                  key={group.id} 
-                  className={`flex items-center justify-between p-4 border rounded-lg transition cursor-pointer ${
-                    selectedGroup?.id === group.id 
-                      ? 'border-[#6aaa64] bg-green-50' 
-                      : 'border-[hsl(var(--border))] hover:border-[#6aaa64]'
-                  }`}
-                  onClick={() => handleSelectGroup(group)}
-                >
-                  <div className="flex items-center gap-3">
-                    <Users className={selectedGroup?.id === group.id ? 'text-[#6aaa64]' : 'text-[hsl(var(--muted-foreground))]'} size={20} />
-                    <div>
-                      <h3 className="font-semibold text-[hsl(var(--foreground))]">{group.name}</h3>
-                      {group.description && (
-                        <p className="text-sm text-[hsl(var(--muted-foreground))]">{group.description}</p>
-                      )}
-                    </div>
-                  </div>
-                  {selectedGroup?.id === group.id && (
-                    <span className="text-sm font-medium text-[#6aaa64]">Active</span>
-                  )}
-                </div>
-              ))}
+          {availableGroups.length === 0 ? (
+            <div className="text-center py-8">
+              <Users size={48} className="mx-auto text-[hsl(var(--muted-foreground))] mb-4" />
+              <p className="text-[hsl(var(--muted-foreground))] mb-4">
+                You haven't joined any groups yet.
+              </p>
+              <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                Ask a group admin for an invite code to get started!
+              </p>
             </div>
           ) : (
-            <div className="text-center py-8">
-              <Users className="mx-auto text-[hsl(var(--muted-foreground))] mb-4" size={48} />
-              <p className="text-[hsl(var(--muted-foreground))] mb-4">You're not a member of any groups yet</p>
-              <button
-                onClick={() => setShowJoinForm(true)}
-                className="bg-[#6aaa64] text-white px-6 py-3 rounded-lg hover:bg-[#599a5b] transition font-semibold"
-              >
-                Join a Group
-              </button>
+            <div className="grid gap-4">
+              {availableGroups.map((group) => (
+                <div
+                  key={group.id}
+                  className="flex items-center justify-between p-4 border border-[hsl(var(--border))] rounded-lg hover:bg-[hsl(var(--muted))] transition"
+                >
+                  <div>
+                    <h3 className="font-semibold text-[hsl(var(--foreground))]">
+                      {group.name}
+                    </h3>
+                    <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                      Code: {group.invite_code}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleEnterGroup(group.id)}
+                      className="bg-[#6aaa64] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#599a5b] transition"
+                    >
+                      Enter
+                    </button>
+                    <button
+                      onClick={() => openRenameDialog(group)}
+                      className="bg-[#c9b458] text-white px-3 py-2 rounded-lg font-semibold hover:bg-[#b8a347] transition"
+                      title="Edit Group"
+                    >
+                      <Edit3 size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteGroup(group)}
+                      className="bg-red-500 text-white px-3 py-2 rounded-lg font-semibold hover:bg-red-600 transition"
+                      title="Delete Group"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
 
-        {/* Join Group Section */}
-        <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-6 border border-[hsl(var(--border))]">
-          <h2 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-4">Join New Group</h2>
-          
-          {!showJoinForm ? (
-            <button
-              onClick={() => setShowJoinForm(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#6aaa64] text-white rounded-lg hover:bg-[#599a5b] transition font-semibold"
-            >
-              <Plus size={16} />
-              Join Group with Code
-            </button>
-          ) : (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2 text-[hsl(var(--foreground))]">Invite Code</label>
-                <input
-                  type="text"
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                  placeholder="Enter invite code (e.g., FAMILY2024)"
-                  className="w-full p-3 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] text-[hsl(var(--foreground))] focus:ring-2 focus:ring-[#6aaa64] focus:border-transparent"
-                  maxLength={10}
-                />
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleJoinGroup}
-                  disabled={joining || !inviteCode.trim()}
-                  className="px-6 py-2 bg-[#6aaa64] text-white rounded-lg hover:bg-[#599a5b] transition font-semibold disabled:bg-[hsl(var(--muted))] disabled:cursor-not-allowed"
-                >
-                  {joining ? 'Joining...' : 'Join Group'}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowJoinForm(false);
-                    setInviteCode('');
-                  }}
-                  className="px-6 py-2 border border-[hsl(var(--border))] text-[hsl(var(--foreground))] rounded-lg hover:bg-[hsl(var(--muted))] transition"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
+        {/* Admin Center */}
+        <div className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md mt-6">
+          <h2 className="text-xl font-bold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
+            <Settings size={24} />
+            Admin Center
+          </h2>
+          <p className="text-[hsl(var(--muted-foreground))] mb-4">
+            Manage groups, members, scores, and tournaments.
+          </p>
+          <Link
+            href="/golf/clubhouse/admin"
+            className="bg-[#c9b458] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[#b8a347] transition inline-flex items-center gap-2"
+          >
+            <Settings size={20} />
+            Open Admin Center
+          </Link>
         </div>
+
+        {/* Create Group Modal */}
+        {showCreateGroup && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-[hsl(var(--card))] rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-semibold mb-4">Create New Group</h3>
+              
+              <form onSubmit={handleCreateGroup} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Group Name</label>
+                  <input
+                    type="text"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    placeholder="e.g., Smith Family Golf"
+                    className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-md bg-[hsl(var(--background))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[#6aaa64]"
+                    required
+                    disabled={isCreating}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Description (Optional)</label>
+                  <textarea
+                    value={newGroupDescription}
+                    onChange={(e) => setNewGroupDescription(e.target.value)}
+                    placeholder="Brief description of your group..."
+                    className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-md bg-[hsl(var(--background))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[#6aaa64]"
+                    rows={3}
+                    disabled={isCreating}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCreateGroup(false);
+                      setNewGroupName('');
+                      setNewGroupDescription('');
+                    }}
+                    className="px-4 py-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition"
+                    disabled={isCreating}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isCreating || !newGroupName.trim()}
+                    className="bg-[#6aaa64] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[#599a5b] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isCreating ? 'Creating...' : 'Create Group'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Rename Group Modal */}
+        {showRenameGroup && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-[hsl(var(--card))] rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-semibold mb-4">Update Group</h3>
+              
+              <form onSubmit={handleRenameGroup} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Group Name</label>
+                  <input
+                    type="text"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    placeholder="Group name"
+                    className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-md bg-[hsl(var(--background))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[#6aaa64]"
+                    required
+                    disabled={isUpdating}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Description (Optional)</label>
+                  <textarea
+                    value={newGroupDescription}
+                    onChange={(e) => setNewGroupDescription(e.target.value)}
+                    placeholder="Brief description of your group..."
+                    className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-md bg-[hsl(var(--background))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[#6aaa64]"
+                    rows={3}
+                    disabled={isUpdating}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowRenameGroup(false);
+                      setSelectedGroupForRename(null);
+                      setNewGroupName('');
+                      setNewGroupDescription('');
+                    }}
+                    className="px-4 py-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition"
+                    disabled={isUpdating}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isUpdating || !newGroupName.trim()}
+                    className="bg-[#6aaa64] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[#599a5b] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isUpdating ? 'Updating...' : 'Update Group'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

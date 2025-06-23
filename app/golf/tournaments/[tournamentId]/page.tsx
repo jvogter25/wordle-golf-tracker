@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Database } from '@/types/supabase';
 
 const navLinks = [
   { href: '/golf/homepage', label: 'Home' },
@@ -14,7 +12,6 @@ const navLinks = [
   { href: '/golf/tournaments', label: 'Tournaments' },
   { href: '/golf/submit', label: 'Submit Score' },
   { href: '/golf/clubhouse', label: 'Clubhouse' },
-  { href: '/golf/clubhouse/admin-working', label: 'Admin Center' },
 ];
 
 function BurgerMenu() {
@@ -63,334 +60,16 @@ function WordleHeader({ label }: { label: string }) {
   );
 }
 
-// Function to convert raw score to golf scoring
-function formatGolfScore(score: number): string {
-  const par = 4; // Assuming par 4 for Wordle (4 attempts is par)
-  const difference = score - par;
-  
-  if (difference === 0) return 'E';
-  if (difference > 0) return `+${difference}`;
-  return `${difference}`;
-}
+// Mock tournament leaderboard data
+const tournamentLeaderboard = [
+  { id: 1, name: 'Jake Vogter', avatar: '/golf/jake-avatar.jpg', score: 12 },
+  { id: 2, name: 'Annika Sörenstam', avatar: 'https://randomuser.me/api/portraits/women/44.jpg', score: 14 },
+  { id: 3, name: 'Rory McIlroy', avatar: 'https://randomuser.me/api/portraits/men/65.jpg', score: 15 },
+  { id: 4, name: 'Lexi Thompson', avatar: 'https://randomuser.me/api/portraits/women/68.jpg', score: 16 },
+];
 
 export default function TournamentLeaderboardPage() {
-  const [leaderboard, setLeaderboard] = useState<any[]>([]);
-  const [tournamentName, setTournamentName] = useState('');
-  const [tournamentDates, setTournamentDates] = useState('');
-  const [tournamentType, setTournamentType] = useState('');
-  const [tournamentData, setTournamentData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const supabase = createClientComponentClient<Database>();
-  const params = useParams();
-  const tournamentId = params?.tournamentId;
-
-  useEffect(() => {
-    const fetchLeaderboard = async () => {
-      setLoading(true);
-      
-      // Fetch tournament info
-      const { data: tournament, error: tournamentError } = await supabase
-        .from('tournaments')
-        .select('*')
-        .eq('id', tournamentId)
-        .single();
-      
-      if (tournamentError) {
-        setLoading(false);
-        return;
-      }
-      
-      setTournamentData(tournament);
-      setTournamentName(tournament?.name || 'Tournament');
-      setTournamentType(tournament?.tournament_type || '');
-      
-      if (tournament?.start_date && tournament?.end_date) {
-        const s = new Date(tournament.start_date);
-        const e = new Date(tournament.end_date);
-        const pad = n => n.toString().padStart(2, '0');
-        setTournamentDates(`${pad(s.getMonth()+1)}/${pad(s.getDate())} - ${pad(e.getMonth()+1)}/${pad(e.getDate())}`);
-      }
-      
-      // Try the SQL function first
-      const { data: leaderboardData, error: leaderboardError } = await supabase.rpc('get_tournament_leaderboard', { tournament_id: tournamentId });
-      
-      if (leaderboardError) {
-        
-        // Fallback: Query scores directly
-        const { data: scoresData, error: scoresError } = await supabase
-          .from('scores')
-          .select(`
-            *,
-            profiles (
-              id,
-              display_name,
-              avatar_url
-            )
-          `)
-          .gte('puzzle_date', tournament.start_date)
-          .lte('puzzle_date', tournament.end_date);
-        
-        if (scoresError) {
-          setLoading(false);
-          return;
-        }
-        
-        // Debug: Let's also check what scores exist for this user regardless of date
-        const { data: allUserScores } = await supabase
-          .from('scores')
-          .select(`
-            *,
-            profiles (
-              id,
-              display_name,
-              avatar_url
-            )
-          `)
-          .eq('user_id', tournament.birthday_user_id);
-        
-        console.log('All user scores:', allUserScores);
-        console.log('Tournament dates:', tournament.start_date, 'to', tournament.end_date);
-        console.log('Filtered scores:', scoresData);
-        console.log('Today date string:', new Date().toDateString());
-        console.log('Today ISO date:', new Date().toISOString().split('T')[0]);
-        
-        // Check if today's score exists
-        const todayDateString = new Date().toISOString().split('T')[0];
-        const todayScore = scoresData?.find(score => 
-          score.user_id === tournament.birthday_user_id && 
-          score.puzzle_date === todayDateString
-        );
-        console.log('Today score found:', todayScore);
-        
-        // Also check for yesterday's score in case of date issues
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayDateString = yesterday.toISOString().split('T')[0];
-        const yesterdayScore = scoresData?.find(score => 
-          score.user_id === tournament.birthday_user_id && 
-          score.puzzle_date === yesterdayDateString
-        );
-        console.log('Yesterday score found:', yesterdayScore);
-        
-        // Process scores manually
-        const playerScores = new Map();
-        
-        scoresData?.forEach(score => {
-          const userId = score.user_id;
-          const profile = (score.profiles as any);
-          
-          console.log('🔍 DETAILED SCORE PROCESSING:', {
-            userId,
-            date: score.puzzle_date,
-            rawScore: score.raw_score,
-            attempts: score.attempts,
-            isBirthdayPerson: tournament.birthday_user_id === userId,
-            tournamentBirthdayUserId: tournament.birthday_user_id,
-            userIdMatch: tournament.birthday_user_id === userId,
-            tournamentType: tournament.tournament_type,
-            birthdayAdvantage: tournament.birthday_advantage
-          });
-          
-          if (!playerScores.has(userId)) {
-            playerScores.set(userId, {
-              id: userId,
-              display_name: profile?.display_name || 'Unknown',
-              avatar_url: profile?.avatar_url || null,
-              scores: [],
-              totalScore: 0,
-              todayScore: null,
-              weekScore: 0,
-              qualifyingDays: 0,
-              is_birthday_person: tournament.birthday_user_id === userId
-            });
-          }
-          
-          const player = playerScores.get(userId);
-          const scoreDate = new Date(score.puzzle_date);
-          const today = new Date();
-          
-          // More flexible date comparison - check if it's within the last 2 days
-          const daysDiff = Math.abs(today.getTime() - scoreDate.getTime()) / (1000 * 60 * 60 * 24);
-          const isToday = scoreDate.toDateString() === today.toDateString();
-          const isRecent = daysDiff <= 1; // Within 1 day
-          
-          console.log('Date comparison:', {
-            scoreDate: scoreDate.toDateString(),
-            today: today.toDateString(),
-            daysDiff,
-            isToday,
-            isRecent
-          });
-          
-          // Check if this is a qualifying round (Mon-Thu)
-          const dayOfWeek = scoreDate.getDay(); // 0=Sunday, 1=Monday, etc.
-          const isQualifyingDay = [1,2,3,4].includes(dayOfWeek); // Mon-Thu
-          
-          // FORCE BIRTHDAY ADVANTAGE FOR TESTING - Since it's Monday and you're the birthday person
-          const forceAdvantage = tournament.tournament_type === 'birthday' && 
-                                tournament.birthday_user_id === userId;
-          
-          console.log('🗓️ DAY ANALYSIS DETAILED:', {
-            scoreDate: scoreDate,
-            scoreDateString: scoreDate.toString(),
-            dayOfWeek: dayOfWeek,
-            dayNames: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-            dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayOfWeek],
-            qualifyingDays: [1,2,3,4],
-            isQualifyingDay: isQualifyingDay,
-            includesCheck: [1,2,3,4].includes(dayOfWeek),
-            date: score.puzzle_date
-          });
-          
-          // Use the correct score field - try attempts first, then raw_score
-          let actualScore = score.attempts || score.raw_score;
-          
-          console.log('Score field analysis:', {
-            attempts: score.attempts,
-            raw_score: score.raw_score,
-            actualScore: actualScore
-          });
-          
-          // If both fields are 0 but user says they scored par, there's a data issue
-          // For now, let's use the raw value and investigate the submission process
-          if (actualScore === 0) {
-            console.log('WARNING: Score is 0 - this may indicate a score submission issue');
-            // Don't assume failed attempt - use the actual stored value for now
-            actualScore = score.raw_score; // Keep as 0 to see the real issue
-          }
-          
-          // Use actual score for individual day scoring
-          let adjustedScore = actualScore;
-          
-          // For birthday person on qualifying days, apply advantage to individual score
-          console.log('🎂 BIRTHDAY ADVANTAGE CHECK:', {
-            tournamentType: tournament.tournament_type,
-            isBirthdayTournament: tournament.tournament_type === 'birthday',
-            birthdayUserId: tournament.birthday_user_id,
-            currentUserId: userId,
-            isCurrentUserBirthdayPerson: tournament.birthday_user_id === userId,
-            isQualifyingDay: isQualifyingDay,
-            dayOfWeek: dayOfWeek,
-            shouldApplyAdvantage: tournament.tournament_type === 'birthday' && tournament.birthday_user_id === userId && isQualifyingDay
-          });
-          
-          if (forceAdvantage && isQualifyingDay) {
-            adjustedScore = Math.max(0, actualScore - (tournament.birthday_advantage || 0.5));
-            player.qualifyingDays++;
-            console.log('✅ APPLIED BIRTHDAY ADVANTAGE:', {
-              actualScore: actualScore,
-              advantage: tournament.birthday_advantage,
-              adjustedScore,
-              qualifyingDaysCount: player.qualifyingDays
-            });
-          } else {
-            console.log('❌ NO BIRTHDAY ADVANTAGE APPLIED - Reason:', {
-              wrongTournamentType: tournament.tournament_type !== 'birthday',
-              wrongUser: tournament.birthday_user_id !== userId,
-              notQualifyingDay: !isQualifyingDay
-            });
-          }
-          
-          player.scores.push({
-            date: score.puzzle_date,
-            rawScore: actualScore,
-            adjustedScore: adjustedScore,
-            isToday: isToday
-          });
-          
-          player.weekScore += adjustedScore;
-          
-          // Use recent score as "today" score if no exact today score
-          if (isToday || (isRecent && player.todayScore === null)) {
-            player.todayScore = adjustedScore;
-            console.log('Set today score:', adjustedScore, isToday ? '(exact today)' : '(recent)');
-          }
-          
-          console.log('Player state after processing:', {
-            weekScore: player.weekScore,
-            todayScore: player.todayScore,
-            qualifyingDays: player.qualifyingDays
-          });
-        });
-        
-        // Apply birthday tournament starting advantage
-        if (tournament.tournament_type === 'birthday') {
-          const today = new Date();
-          const dayOfWeek = today.getDay(); // 0=Sunday, 1=Monday, etc.
-          const isWeekend = [5, 6, 0].includes(dayOfWeek); // Fri, Sat, Sun
-          
-          // FORCE BIRTHDAY ADVANTAGE - Apply -2 advantage for birthday person regardless of day
-          const shouldApplyFullAdvantage = true; // Force for testing
-          
-          console.log('🏁 WEEKEND ADVANTAGE CHECK:', {
-            today: today.toDateString(),
-            dayOfWeek: dayOfWeek,
-            isWeekend: isWeekend,
-            tournamentType: tournament.tournament_type,
-            birthdayUserId: tournament.birthday_user_id
-          });
-          
-          // If it's the weekend OR we're forcing advantage, birthday person should have full qualifying advantage
-          // even if they haven't submitted scores for all qualifying days
-          if (isWeekend || shouldApplyFullAdvantage) {
-            playerScores.forEach((player, userId) => {
-              if (tournament.birthday_user_id === userId) {
-                // Calculate how many qualifying days they actually played
-                const qualifyingScoresSubmitted = player.scores.filter(score => {
-                  const scoreDate = new Date(score.date);
-                  const scoreDayOfWeek = scoreDate.getDay();
-                  return [1,2,3,4].includes(scoreDayOfWeek); // Mon-Thu
-                }).length;
-                
-                // They should get advantage for all 4 qualifying days, regardless of submission
-                const fullQualifyingAdvantage = (tournament.birthday_advantage || 0.5) * 4;
-                const alreadyAppliedAdvantage = (tournament.birthday_advantage || 0.5) * qualifyingScoresSubmitted;
-                const additionalAdvantage = fullQualifyingAdvantage - alreadyAppliedAdvantage;
-                
-                player.weekScore -= additionalAdvantage;
-                console.log('🎉 APPLIED WEEKEND BIRTHDAY ADVANTAGE:', {
-                  userId,
-                  qualifyingScoresSubmitted,
-                  fullQualifyingAdvantage,
-                  alreadyAppliedAdvantage,
-                  additionalAdvantage,
-                  oldWeekScore: player.weekScore + additionalAdvantage,
-                  newWeekScore: player.weekScore
-                });
-              }
-            });
-          } else {
-            console.log('⏰ NOT WEEKEND - No additional advantage applied');
-          }
-        }
-
-        // Convert to array and sort
-        const leaderboardArray = Array.from(playerScores.values())
-          .filter(player => player.scores.length > 0)
-          .sort((a, b) => a.weekScore - b.weekScore);
-        
-        setLeaderboard(leaderboardArray);
-      } else {
-        // Use SQL function results but map them to our expected format
-        const mappedLeaderboard = leaderboardData?.map(player => ({
-          id: player.id,
-          display_name: player.display_name,
-          avatar_url: player.avatar_url,
-          weekScore: player.score || 0,
-          todayScore: null, // SQL function doesn't provide today's score
-          is_birthday_person: player.is_birthday_person || false,
-          scores: [] // SQL function doesn't provide individual scores
-        })) || [];
-        
-        setLeaderboard(mappedLeaderboard);
-      }
-      
-      setLoading(false);
-    };
-    
-    if (tournamentId) fetchLeaderboard();
-  }, [supabase, tournamentId]);
-
+  const tournamentName = 'The Masters'; // Replace with dynamic name in real app
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] p-4">
       <div className="max-w-4xl mx-auto">
@@ -413,131 +92,35 @@ export default function TournamentLeaderboardPage() {
           </div>
         </nav>
         <div className="mb-2">
-          <WordleHeader label={tournamentName.replace("'s Birthday Tournament", "").toUpperCase()} />
-          <WordleHeader label="BIRTHDAY" />
           <WordleHeader label="TOURNAMENT" />
           <WordleHeader label="LEADERBOARD" />
-          {tournamentDates && (
-            <div className="text-center text-sm text-[hsl(var(--muted-foreground))] mb-4" style={{marginTop: '-1.5rem'}}>
-              {tournamentDates}
-            </div>
-          )}
         </div>
-        
-        {/* Tournament Scoring Info */}
-        {tournamentType === 'birthday' && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center mb-2">
-              <span className="text-2xl mr-2">🎂</span>
-              <h3 className="text-lg font-semibold text-yellow-800">Birthday Tournament Scoring</h3>
-            </div>
-            <div className="text-sm text-yellow-700">
-              <p className="mb-1"><strong>Qualifying Rounds (Mon-Thu):</strong> Birthday person gets -0.5 stroke advantage</p>
-              <p><strong>Championship Rounds (Fri-Sun):</strong> Regular scoring for everyone</p>
-            </div>
-          </div>
-        )}
-
-        {/* Debug Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-700">
-          <div>Tournament ID: {tournamentId}</div>
-          <div>Tournament Type: {tournamentType}</div>
-          <div>Birthday User ID: {tournamentData?.birthday_user_id}</div>
-          <div>Leaderboard Length: {leaderboard.length}</div>
-          {leaderboard.length > 0 && (
-            <div>
-              <div>First Player: {leaderboard[0]?.display_name}</div>
-              <div>Today Score: {leaderboard[0]?.todayScore}</div>
-              <div>Week Score: {leaderboard[0]?.weekScore}</div>
-              <div>Qualifying Days: {leaderboard[0]?.qualifyingDays}</div>
-              <div>Is Birthday Person: {leaderboard[0]?.is_birthday_person ? 'Yes' : 'No'}</div>
-              <div>Scores: {JSON.stringify(leaderboard[0]?.scores?.map(s => ({
-                date: s.date,
-                raw: s.rawScore,
-                adjusted: s.adjustedScore,
-                isToday: s.isToday
-              })))}</div>
-            </div>
-          )}
-        </div>
-
-        {/* Tournament Leaderboard */}
         <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-4 md:p-6 mb-6 border border-[hsl(var(--border))]">
-          {loading ? (
-            <div className="text-center py-8">Loading...</div>
-          ) : leaderboard.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-[hsl(var(--muted-foreground))]">No scores submitted yet for this tournament.</p>
-              <p className="text-sm text-[hsl(var(--muted-foreground))] mt-2">Submit your daily Wordle score to appear on the leaderboard!</p>
+          <h2 className="text-2xl font-bold text-[hsl(var(--foreground))] mb-4">{tournamentName}</h2>
+          <div className="divide-y divide-[hsl(var(--border))]">
+            <div className="flex items-center py-2 px-2 font-bold text-[hsl(var(--muted-foreground))] text-xs md:text-sm">
+              <div className="w-10 text-left">Pos</div>
+              <div className="flex-1 text-left pl-2">Name</div>
+              <div className="w-16 text-right">Score</div>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {/* Desktop Header */}
-              <div className="hidden md:flex items-center bg-[hsl(var(--muted))] rounded-lg p-3 font-semibold text-sm">
-                <div className="w-12">Pos</div>
-                <div className="flex-1 pl-4">Name</div>
-                <div className="w-20 text-center">Today</div>
-                <div className="w-24 text-center">This Week</div>
-              </div>
-              
-              {leaderboard.map((player, idx) => {
-                const pos = idx + 1;
-                const nameClass = idx < 3 ? 'text-[#6aaa64] font-semibold' : 'text-[hsl(var(--foreground))]';
-                
-                return (
-                  <div key={player.id} className="bg-[hsl(var(--muted))] rounded-xl p-4 shadow-sm">
-                    {/* Mobile Layout */}
-                    <div className="md:hidden space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-[#6aaa64] rounded-full flex items-center justify-center text-white font-bold text-lg">
-                            {pos}
-                          </div>
-                          <div className={`text-xl font-bold ${nameClass}`}>
-                            {player.display_name}
-                            {player.is_birthday_person && <span className="ml-2 text-lg">🎂</span>}
-                          </div>
-                        </div>
-                        <div>
-                          <img 
-                            src={player.avatar_url || '/golf/jake-avatar.jpg'} 
-                            alt={player.display_name} 
-                            className="w-12 h-12 rounded-full border-2 border-[hsl(var(--primary))]" 
-                          />
-                        </div>
-                      </div>
-                      <div className="text-sm text-[hsl(var(--muted-foreground))] bg-gray-50 p-2 rounded">
-                        <div>Today: {player.todayScore !== null ? formatGolfScore(player.todayScore) : '-'}</div>
-                        <div>This Week: {formatGolfScore(player.weekScore || player.score || 0)}</div>
-                      </div>
-                    </div>
-                    
-                    {/* Desktop Layout */}
-                    <div className="hidden md:flex md:items-center">
-                      <div className="w-12 text-left font-bold text-lg">{pos}</div>
-                      <div className="flex-1 flex items-center pl-4">
-                        <img 
-                          src={player.avatar_url || '/golf/jake-avatar.jpg'} 
-                          alt={player.display_name} 
-                          className="w-10 h-10 rounded-full border-2 border-[hsl(var(--primary))] mr-3" 
-                        />
-                        <span className={`text-lg ${nameClass}`}>
-                          {player.display_name}
-                          {player.is_birthday_person && <span className="ml-2">🎂</span>}
-                        </span>
-                      </div>
-                      <div className="w-20 text-center text-lg font-semibold">
-                        {player.todayScore !== null ? formatGolfScore(player.todayScore) : '-'}
-                      </div>
-                      <div className="w-24 text-center text-xl font-bold">
-                        {formatGolfScore(player.weekScore || player.score || 0)}
-                      </div>
-                    </div>
+            {tournamentLeaderboard.map((player, idx) => {
+              let pos: string = String(idx + 1);
+              if (idx > 0 && tournamentLeaderboard[idx].score === tournamentLeaderboard[idx - 1].score) {
+                pos = `T${idx}`;
+              }
+              const nameClass = idx < 3 ? 'text-[#6aaa64] font-semibold' : 'text-[hsl(var(--foreground))]';
+              return (
+                <div key={player.id} className="flex items-center py-4 px-2 bg-[hsl(var(--muted))] rounded-xl my-2 shadow-sm">
+                  <div className="w-10 text-left font-bold text-base md:text-lg">{pos}</div>
+                  <div className="flex-1 flex items-center pl-2">
+                    <img src={player.avatar} alt={player.name} className="w-8 h-8 rounded-full border-2 border-[hsl(var(--primary))] mr-2" />
+                    <span className={`truncate text-base md:text-lg ${nameClass}`}>{player.name}</span>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                  <div className="w-16 text-right text-xl">{player.score}</div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

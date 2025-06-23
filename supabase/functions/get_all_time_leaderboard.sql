@@ -14,14 +14,51 @@ BEGIN
       p.display_name,
       p.avatar_url,
       COALESCE(
-        (SELECT AVG(raw_score)
-         FROM (
+        (WITH recent_scores AS (
            SELECT raw_score
            FROM scores s2
            WHERE s2.user_id = p.id
            ORDER BY puzzle_date DESC
            LIMIT 20
-         ) recent_scores
+         ),
+         score_stats AS (
+           SELECT 
+             COUNT(*) as games_played,
+             ARRAY_AGG(raw_score ORDER BY raw_score ASC) as sorted_scores
+           FROM recent_scores
+         )
+         SELECT 
+           CASE 
+             WHEN games_played < 3 THEN 0
+             WHEN games_played >= 20 THEN 
+               -- Best 8 of 20, apply USGA multiplier
+               ROUND((
+                 (sorted_scores[1] + sorted_scores[2] + sorted_scores[3] + sorted_scores[4] + 
+                  sorted_scores[5] + sorted_scores[6] + sorted_scores[7] + sorted_scores[8]) / 8.0 * 0.96
+               )::numeric, 1)
+             WHEN games_played >= 15 THEN 
+               -- Best 6 of 15-19
+               ROUND((
+                 (sorted_scores[1] + sorted_scores[2] + sorted_scores[3] + 
+                  sorted_scores[4] + sorted_scores[5] + sorted_scores[6]) / 6.0 * 0.96
+               )::numeric, 1)
+             WHEN games_played >= 10 THEN 
+               -- Best 4 of 10-14
+               ROUND((
+                 (sorted_scores[1] + sorted_scores[2] + sorted_scores[3] + sorted_scores[4]) / 4.0 * 0.96
+               )::numeric, 1)
+             WHEN games_played >= 6 THEN 
+               -- Best 3 of 6-9
+               ROUND((
+                 (sorted_scores[1] + sorted_scores[2] + sorted_scores[3]) / 3.0 * 0.96
+               )::numeric, 1)
+             ELSE 
+               -- Best 2 of 3-5
+               ROUND((
+                 (sorted_scores[1] + sorted_scores[2]) / 2.0 * 0.96
+               )::numeric, 1)
+           END
+         FROM score_stats
         ),
         0
       ) as handicap,
@@ -39,7 +76,7 @@ BEGIN
     us.id,
     us.display_name,
     us.avatar_url,
-    us.handicap,
+    GREATEST(0, us.handicap) as handicap, -- Ensure handicap is never negative
     us.today
   FROM user_scores us
   ORDER BY us.handicap ASC;

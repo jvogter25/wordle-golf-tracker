@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Database } from '@/types/supabase';
+import { Database } from '../../../../src/types/supabase';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { Menu, X, Trash2 } from 'lucide-react';
@@ -68,6 +68,7 @@ export default function WorkingAdminPage() {
   const [selectedGroup, setSelectedGroup] = useState("");
   const [newGroupCode, setNewGroupCode] = useState("");
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
   const supabase = createClientComponentClient<Database>();
 
   useEffect(() => {
@@ -78,6 +79,14 @@ export default function WorkingAdminPage() {
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         
         if (authError || !user) {
+          setLoading(false);
+          return;
+        }
+
+        setUser(user);
+
+        // Check admin access
+        if (user.email !== 'jakevogt25@gmail.com') {
           setLoading(false);
           return;
         }
@@ -120,6 +129,21 @@ export default function WorkingAdminPage() {
 
     fetchGroups();
   }, [supabase]);
+
+  // Admin access check
+  if (!loading && (!user || user.email !== 'jakevogt25@gmail.com')) {
+    return (
+      <div className="min-h-screen bg-[hsl(var(--background))] flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-[hsl(var(--foreground))] mb-4">Access Denied</h2>
+          <p className="text-[hsl(var(--muted-foreground))] mb-4">This page is restricted to administrators only.</p>
+          <Link href="/golf/homepage" className="bg-[#6aaa64] text-white px-6 py-3 rounded-lg hover:bg-[#599a5b] transition">
+            Back to Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const updateGroupCode = async () => {
     if (!selectedGroup || !newGroupCode.trim()) {
@@ -179,11 +203,9 @@ export default function WorkingAdminPage() {
         <nav className="bg-[hsl(var(--card))] shadow-sm px-4 py-2 flex justify-between items-center border-b border-[hsl(var(--border))] mb-4">
           <Link href="/golf/player" className="flex items-center space-x-3">
             <div className="relative">
-              <img
-                src="/golf/jake-avatar.jpg"
-                alt="Jake Vogter"
-                className="w-12 h-12 rounded-full border-2 border-[hsl(var(--primary))] object-cover"
-              />
+              <div className="w-12 h-12 rounded-full border-2 border-[hsl(var(--primary))] bg-gray-100 flex items-center justify-center">
+                <span role="img" aria-label="avatar">👤</span>
+              </div>
               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[hsl(var(--primary))] rounded-full border-2 border-[hsl(var(--card))]" />
             </div>
           </Link>
