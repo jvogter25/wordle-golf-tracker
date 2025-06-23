@@ -3,14 +3,13 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { Database } from '../src/types/supabase'
 
 interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
   signOut: () => Promise<void>
-  supabase: ReturnType<typeof createClientComponentClient<Database>>
+  supabase: any
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -25,7 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClientComponentClient<Database>()
+  const supabase = createClientComponentClient()
 
   useEffect(() => {
     // Get initial session

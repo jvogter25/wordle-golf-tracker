@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Database } from '../../../../src/types/supabase';
 import { useGroup } from '../../../../contexts/GroupContext';
 import { useAuth } from '../../../../contexts/AuthContext';
 import NavigationAvatar from '../../../../components/NavigationAvatar';
@@ -80,7 +79,7 @@ export default function GroupSubmitScorePage() {
   const groupId = params.groupId as string;
   const { selectedGroup, availableGroups, setSelectedGroup } = useGroup();
   const { user } = useAuth();
-  const supabase = createClientComponentClient<Database>();
+  const supabase = createClientComponentClient();
 
   // Set the selected group based on URL parameter
   useEffect(() => {

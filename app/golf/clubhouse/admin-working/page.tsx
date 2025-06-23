@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Database } from '../../../../src/types/supabase';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { Menu, X, Trash2 } from 'lucide-react';
@@ -69,7 +68,7 @@ export default function WorkingAdminPage() {
   const [newGroupCode, setNewGroupCode] = useState("");
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
-  const supabase = createClientComponentClient<Database>();
+  const supabase = createClientComponentClient();
 
   useEffect(() => {
     const fetchGroups = async () => {

@@ -6,7 +6,6 @@ import { Menu, X } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getUserGroups } from '../../../lib/groups';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Database } from '../../../src/types/supabase';
 import Navigation from '../../../components/Navigation';
 
 function WordleHeader({ label }: { label: string }) {
@@ -33,7 +32,7 @@ export default function PlayerPage() {
   const [groups, setGroups] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = createClientComponentClient<Database>();
+  const supabase = createClientComponentClient();
 
   useEffect(() => {
     console.log('🔄 useEffect triggered, user:', user?.email || 'null');

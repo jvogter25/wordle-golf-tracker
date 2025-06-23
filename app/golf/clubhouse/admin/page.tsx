@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Database } from '../../../../src/types/supabase';
 import { toast } from 'sonner';
 import Navigation from '../../../../components/Navigation';
 
@@ -22,7 +21,7 @@ export default function ClubhouseAdminPage() {
   const [newScore, setNewScore] = useState("");
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState<string[]>([]);
-  const supabase = createClientComponentClient<Database>();
+  const supabase = createClientComponentClient();
 
   // Tournament management state
   const [tournaments, setTournaments] = useState<any[]>([]);

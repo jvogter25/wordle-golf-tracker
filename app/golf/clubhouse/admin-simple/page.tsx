@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Database } from '../../../../src/types/supabase';
 import { toast } from 'sonner';
 
 export default function AdminSimplePage() {
@@ -9,7 +8,7 @@ export default function AdminSimplePage() {
   const [selectedGroup, setSelectedGroup] = useState("");
   const [newGroupCode, setNewGroupCode] = useState("");
   const [loading, setLoading] = useState(true);
-  const supabase = createClientComponentClient<Database>();
+  const supabase = createClientComponentClient();
 
   useEffect(() => {
     const fetchGroups = async () => {
