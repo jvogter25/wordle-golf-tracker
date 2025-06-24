@@ -7,11 +7,11 @@
 
 /**
  * Get today's Wordle puzzle number in PST timezone
- * Hard-coded to start at 1466 on June 23, 2025 and increment daily at midnight PST
+ * Hard-coded to start at 1466 on June 24, 2025 and increment daily at midnight PST
  */
 export function getTodaysPuzzleNumber(): number {
-  // Base date: June 23, 2025 = Puzzle #1466 (correct Wordle number)
-  const baseDate = new Date('2025-06-23T00:00:00-08:00'); // PST
+  // Base date: June 24, 2025 = Puzzle #1466 (correct Wordle number)
+  const baseDate = new Date('2025-06-24T00:00:00-08:00'); // PST
   const basePuzzleNumber = 1466;
   
   // Get current PST time
@@ -31,8 +31,8 @@ export function getTodaysPuzzleNumber(): number {
  * @param date - The date to calculate puzzle number for
  */
 export function getPuzzleNumberForDate(date: Date): number {
-  // Base date: June 23, 2025 = Puzzle #1466 (correct Wordle number)
-  const baseDate = new Date('2025-06-23T00:00:00-08:00'); // PST
+  // Base date: June 24, 2025 = Puzzle #1466 (correct Wordle number)
+  const baseDate = new Date('2025-06-24T00:00:00-08:00'); // PST
   const basePuzzleNumber = 1466;
   
   // Convert input date to PST
