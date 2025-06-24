@@ -1,10 +1,6 @@
--- Fix 1: Update existing birthday tournaments to have -2.0 advantage
-UPDATE tournaments 
-SET birthday_advantage = -2.0 
-WHERE tournament_type = 'birthday' 
-AND birthday_advantage = 2.0;
+-- Simple fix: Update the get_all_time_leaderboard function to use golf_score instead of raw_score
+-- This will fix the handicap calculation issue
 
--- Fix 2: Update the get_all_time_leaderboard function to use golf_score instead of raw_score
 CREATE OR REPLACE FUNCTION get_all_time_leaderboard()
 RETURNS TABLE (
   id uuid,
@@ -88,71 +84,4 @@ BEGIN
   FROM user_scores us
   ORDER BY us.handicap ASC;
 END;
-$$ LANGUAGE plpgsql;
-
--- Test the function to make sure it works
-SELECT * FROM get_all_time_leaderboard() LIMIT 5;
-
--- Fix 3: Recalculate golf_score for all existing scores to ensure birthday advantages are applied
-UPDATE scores 
-SET golf_score = CASE 
-  WHEN tournament_id IS NOT NULL THEN
-    -- Check if this is a birthday tournament and apply advantage
-    CASE 
-      WHEN EXISTS (
-        SELECT 1 FROM tournaments t 
-        WHERE t.id = scores.tournament_id 
-        AND t.tournament_type = 'birthday' 
-        AND t.birthday_user_id = scores.user_id
-      ) THEN
-        -- Apply birthday advantage (-2 strokes)
-        (raw_score - 4) + COALESCE((
-          SELECT birthday_advantage 
-          FROM tournaments t 
-          WHERE t.id = scores.tournament_id
-        ), 0)
-      ELSE
-        -- Regular tournament score
-        raw_score - 4
-      END
-  ELSE
-    -- Regular score (raw_score - par)
-    raw_score - 4
-  END
-WHERE golf_score != (
-  CASE 
-    WHEN tournament_id IS NOT NULL THEN
-      CASE 
-        WHEN EXISTS (
-          SELECT 1 FROM tournaments t 
-          WHERE t.id = scores.tournament_id 
-          AND t.tournament_type = 'birthday' 
-          AND t.birthday_user_id = scores.user_id
-        ) THEN
-          (raw_score - 4) + COALESCE((
-            SELECT birthday_advantage 
-            FROM tournaments t 
-            WHERE t.id = scores.tournament_id
-          ), 0)
-        ELSE
-          raw_score - 4
-        END
-    ELSE
-      raw_score - 4
-    END
-);
-
--- Verify the changes
-SELECT 
-  t.name as tournament_name,
-  t.tournament_type,
-  t.birthday_advantage,
-  p.display_name,
-  s.raw_score,
-  s.golf_score,
-  s.puzzle_date
-FROM scores s
-JOIN tournaments t ON s.tournament_id = t.id
-JOIN profiles p ON s.user_id = p.id
-WHERE t.tournament_type = 'birthday'
-ORDER BY s.puzzle_date DESC; 
+$$ LANGUAGE plpgsql; 

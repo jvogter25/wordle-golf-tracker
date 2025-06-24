@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Menu, X, Upload, User, Calendar, Trophy, Users } from 'lucide-react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+// import { Database } from '../../../src/types/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useGroup } from '../../../contexts/GroupContext';
 import NavigationAvatar from '../../../components/NavigationAvatar';
@@ -88,6 +89,7 @@ interface GroupStats {
 export default function GlobalProfilePage() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [groupStats, setGroupStats] = useState<GroupStats[]>([]);
+  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -156,6 +158,40 @@ export default function GlobalProfilePage() {
           }
         } catch (handicapError) {
           console.error('Error fetching handicap:', handicapError);
+        }
+
+        // Fetch overall statistics
+        try {
+          const { data: scoresData } = await supabase
+            .from('scores')
+            .select('*')
+            .eq('user_id', user.id);
+
+          if (scoresData) {
+            const totalScores = scoresData.length;
+            const avgScore = totalScores > 0 ? scoresData.reduce((sum, score) => sum + score.raw_score, 0) / totalScores : 0;
+            const holeInOnes = scoresData.filter(s => s.raw_score === 1).length;
+            const eagles = scoresData.filter(s => s.raw_score === 2).length;
+            const birdies = scoresData.filter(s => s.raw_score === 3).length;
+            const pars = scoresData.filter(s => s.raw_score === 4).length;
+            const bogeys = scoresData.filter(s => s.raw_score === 5).length;
+            const doubleBogeys = scoresData.filter(s => s.raw_score === 6).length;
+            const failed = scoresData.filter(s => s.raw_score === 7).length;
+
+            setStats({
+              totalScores,
+              avgScore: avgScore.toFixed(2),
+              holeInOnes,
+              eagles,
+              birdies,
+              pars,
+              bogeys,
+              doubleBogeys,
+              failed
+            });
+          }
+        } catch (statsError) {
+          console.error('Error fetching statistics:', statsError);
         }
 
         // Fetch stats for each group with timeout protection
@@ -586,40 +622,38 @@ export default function GlobalProfilePage() {
               </form>
             </div>
 
-            {/* Group Statistics */}
-            <div className="bg-[hsl(var(--card))] rounded-lg p-6 border border-[hsl(var(--border))]">
-              <h3 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-4">Group Statistics</h3>
-              
-              {groupStats.length === 0 ? (
-                <p className="text-[hsl(var(--muted-foreground))]">No statistics available yet. Join a group and start playing!</p>
-              ) : (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {groupStats.map((stat, idx) => (
-                    <div key={idx} className="bg-[hsl(var(--muted))] rounded-lg p-4">
-                      <h4 className="font-semibold text-[hsl(var(--foreground))] mb-3">{stat.group_name}</h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-[hsl(var(--muted-foreground))]">Games Played:</span>
-                          <span className="font-semibold">{stat.total_scores}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-[hsl(var(--muted-foreground))]">Average Score:</span>
-                          <span className="font-semibold">{stat.average_score}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-[hsl(var(--muted-foreground))]">Best Score:</span>
-                          <span className="font-semibold">{stat.best_score || 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-[hsl(var(--muted-foreground))]">Current Streak:</span>
-                          <span className="font-semibold">{stat.current_streak} days</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+            {/* Statistics */}
+            {stats && (
+              <div className="bg-[hsl(var(--card))] rounded-lg p-6 border border-[hsl(var(--border))]">
+                <h3 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-4">Statistics</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-[#6aaa64]">{stats.totalScores}</div>
+                    <div className="text-sm text-[hsl(var(--muted-foreground))]">Total Rounds</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-[#6aaa64]">{stats.avgScore}</div>
+                    <div className="text-sm text-[hsl(var(--muted-foreground))]">Average Score</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-[#c9b458]">{stats.eagles}</div>
+                    <div className="text-sm text-[hsl(var(--muted-foreground))]">Eagles</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-[#6aaa64]">{stats.birdies}</div>
+                    <div className="text-sm text-[hsl(var(--muted-foreground))]">Birdies</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-[#787c7e]">{stats.pars}</div>
+                    <div className="text-sm text-[hsl(var(--muted-foreground))]">Pars</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-[#787c7e]">{stats.bogeys}</div>
+                    <div className="text-sm text-[hsl(var(--muted-foreground))]">Bogeys</div>
+                  </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Quick Actions */}
             <div className="bg-[hsl(var(--card))] rounded-lg p-6 border border-[hsl(var(--border))]">

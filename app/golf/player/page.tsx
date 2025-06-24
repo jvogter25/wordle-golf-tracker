@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useGroup } from '../../../contexts/GroupContext';
 import { getUserGroups } from '../../../lib/groups';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Navigation from '../../../components/Navigation';
@@ -28,6 +29,7 @@ function WordleHeader({ label }: { label: string }) {
 
 export default function PlayerPage() {
   const { user } = useAuth();
+  const { selectedGroup } = useGroup();
   const searchParams = useSearchParams();
   const viewingUserId = searchParams.get('userId');
   const isViewingOtherUser = viewingUserId && viewingUserId !== user?.id;
@@ -147,12 +149,16 @@ export default function PlayerPage() {
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] p-4">
       <div className="max-w-4xl mx-auto">
-        {/* Use the new Navigation component with global context */}
+        {/* Use group context when in a group, otherwise global */}
         <Navigation 
-          context="global" 
-          centerLink={{
-            href: "/golf/homepage",
-            label: "Home"
+          context={selectedGroup ? "group" : "global"}
+          groupId={selectedGroup?.id}
+          centerLink={selectedGroup ? {
+            href: `/golf/${selectedGroup.id}/dashboard`,
+            label: "Dashboard"
+          } : {
+            href: "/golf/clubhouse",
+            label: "Clubhouse"
           }}
         />
 
