@@ -321,7 +321,7 @@ export default function GlobalProfilePage() {
         setLoadingTimeout(true);
         setLoading(false);
       }
-    }, 12000);
+    }, 25000);
 
     if (user && availableGroups.length > 0) {
       fetchProfile();
