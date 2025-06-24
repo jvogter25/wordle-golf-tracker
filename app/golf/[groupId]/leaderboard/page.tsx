@@ -8,7 +8,7 @@ import { useGroup } from '../../../../contexts/GroupContext';
 import { useAuth } from '../../../../contexts/AuthContext';
 import NavigationAvatar from '../../../../components/NavigationAvatar';
 import UserAvatar from '../../../../components/UserAvatar';
-import { getTodaysPSTDateString, getTodaysPuzzleNumber } from '@/lib/wordle-utils';
+import { getTodaysPSTDateString, getTodaysPuzzleNumber, getTodaysFormattedDate } from '@/lib/wordle-utils';
 
 const menuItems = [
   { href: (groupId: string) => `/golf/${groupId}/dashboard`, label: 'Dashboard' },
@@ -323,7 +323,10 @@ export default function GroupLeaderboardPage() {
         {/* Today's Scores */}
         <div className="bg-[hsl(var(--card))] rounded-2xl shadow-sm p-4 md:p-6 mb-6 border border-[hsl(var(--border))]">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-[hsl(var(--foreground))]">Today's Scores</h2>
+            <div>
+              <h2 className="text-xl font-semibold text-[hsl(var(--foreground))]">Today's Scores</h2>
+              <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">{getTodaysFormattedDate()}</p>
+            </div>
             <Link href={`/golf/${groupId}/leaderboard/monthly`} className="text-[#6aaa64] hover:text-[#599a5b] font-semibold text-sm">
               View {currentMonthName} →
             </Link>

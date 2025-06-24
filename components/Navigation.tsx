@@ -18,6 +18,7 @@ const globalMenuItems = [
   { href: '/golf/profile', label: 'Player Card' },
   { href: '/golf/homepage', label: 'Home Dashboard' },
   { href: '/golf/clubhouse', label: 'Clubhouse' },
+  { href: '/golf/submit-global', label: 'Submit Score' },
 ];
 
 const groupMenuItems = [
@@ -72,16 +73,23 @@ export default function Navigation({ context, groupId, centerLink }: NavigationP
     <nav className="bg-[hsl(var(--card))] shadow-sm px-4 py-2 flex justify-between items-center border-b border-[hsl(var(--border))] mb-4">
       <NavigationAvatar size="md" linkTo="/golf/profile" />
       
-      {centerLink && (
-        <div className="flex-1 flex justify-center">
+      <div className="flex-1 flex justify-center">
+        {context === 'global' ? (
+          <Link 
+            href="/golf/submit-global" 
+            className="bg-[#6aaa64] text-white px-6 py-2 rounded-full font-bold shadow hover:bg-[#599a5b] transition"
+          >
+            Submit Today's Score
+          </Link>
+        ) : centerLink && (
           <Link 
             href={centerLink.href} 
             className="bg-[#6aaa64] text-white px-6 py-2 rounded-full font-bold shadow hover:bg-[#599a5b] transition"
           >
             {centerLink.label}
           </Link>
-        </div>
-      )}
+        )}
+      </div>
       
       <div className="flex items-center justify-end">
         <BurgerMenu context={context} groupId={groupId} />

@@ -57,4 +57,18 @@ export function getTodaysPSTDateString(): string {
     month: '2-digit',
     day: '2-digit'
   });
+}
+
+/**
+ * Get formatted date string for leaderboard display
+ * Returns format like "June 24, 2025"
+ */
+export function getTodaysFormattedDate(): string {
+  const now = new Date();
+  return now.toLocaleDateString("en-US", {
+    timeZone: "America/Los_Angeles",
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
 } 

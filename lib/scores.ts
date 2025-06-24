@@ -46,6 +46,113 @@ export const submitScore = async (supabase, groupId: string, attempts: number, p
   return newScore
 }
 
+export const submitUniversalScore = async (supabase, attempts: number, puzzleNumber: number, puzzleDate: string) => {
+  const user = await supabase.auth.getUser()
+  if (!user.data.user) throw new Error('Not authenticated')
+  
+  // Validate current day submission
+  if (!isCurrentDaySubmission(puzzleDate)) {
+    throw new Error('Can only submit scores for the current day')
+  }
+
+  // Get all groups the user is a member of
+  const { data: userGroups, error: groupsError } = await supabase
+    .from('group_members')
+    .select('group_id, groups(name)')
+    .eq('user_id', user.data.user.id)
+
+  if (groupsError) throw groupsError
+
+  const results = {
+    success: [],
+    failed: [],
+    skipped: []
+  }
+
+  // If user is not in any groups, submit as individual score
+  if (!userGroups || userGroups.length === 0) {
+    // Check if individual score already exists
+    const { data: existingIndividualScore } = await supabase
+      .from('scores')
+      .select('*')
+      .eq('user_id', user.data.user.id)
+      .is('group_id', null)
+      .eq('puzzle_number', puzzleNumber)
+      .single()
+
+    if (existingIndividualScore) {
+      throw new Error('You have already submitted a score for this puzzle')
+    }
+
+    // Submit individual score
+    const { error: individualError } = await supabase
+      .from('scores')
+      .insert({
+        user_id: user.data.user.id,
+        group_id: null, // Individual score
+        puzzle_date: puzzleDate,
+        puzzle_number: puzzleNumber,
+        attempts: attempts,
+        golf_score: attempts === 1 ? 'Hole-in-One' : attempts === 2 ? 'Eagle' : attempts === 3 ? 'Birdie' : attempts === 4 ? 'Par' : attempts === 5 ? 'Bogey' : attempts === 6 ? 'Double Bogey' : 'Failed',
+        raw_score: attempts,
+        submitted_by_admin: false
+      })
+
+    if (individualError) throw individualError
+
+    results.success.push('Individual Profile')
+    return results
+  }
+
+  // Submit to all groups the user is a member of
+  for (const userGroup of userGroups) {
+    const groupId = userGroup.group_id
+    const groupName = userGroup.groups?.name || 'Unknown Group'
+
+    try {
+      // Check if score already exists for this group and puzzle number
+      const { data: existingScore } = await supabase
+        .from('scores')
+        .select('*')
+        .eq('user_id', user.data.user.id)
+        .eq('group_id', groupId)
+        .eq('puzzle_number', puzzleNumber)
+        .single()
+
+      if (existingScore) {
+        results.skipped.push(groupName)
+        continue
+      }
+
+      // Submit score to this group
+      const { error: scoreError } = await supabase
+        .from('scores')
+        .insert({
+          user_id: user.data.user.id,
+          group_id: groupId,
+          puzzle_date: puzzleDate,
+          puzzle_number: puzzleNumber,
+          attempts: attempts,
+          golf_score: attempts === 1 ? 'Hole-in-One' : attempts === 2 ? 'Eagle' : attempts === 3 ? 'Birdie' : attempts === 4 ? 'Par' : attempts === 5 ? 'Bogey' : attempts === 6 ? 'Double Bogey' : 'Failed',
+          raw_score: attempts,
+          submitted_by_admin: false
+        })
+
+      if (scoreError) {
+        results.failed.push(groupName)
+        console.error(`Failed to submit to ${groupName}:`, scoreError)
+      } else {
+        results.success.push(groupName)
+      }
+    } catch (error) {
+      results.failed.push(groupName)
+      console.error(`Error submitting to ${groupName}:`, error)
+    }
+  }
+
+  return results
+}
+
 export const updateHandicap = async (supabase, userId: string, groupId: string) => {
   // Get recent scores for handicap calculation
   const { data: scores, error: scoresError } = await supabase
