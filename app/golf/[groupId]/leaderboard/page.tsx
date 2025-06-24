@@ -8,6 +8,7 @@ import { useGroup } from '../../../../contexts/GroupContext';
 import { useAuth } from '../../../../contexts/AuthContext';
 import NavigationAvatar from '../../../../components/NavigationAvatar';
 import UserAvatar from '../../../../components/UserAvatar';
+import { getTodaysPSTDateString } from '@/lib/wordle-utils';
 
 const menuItems = [
   { href: (groupId: string) => `/golf/${groupId}/dashboard`, label: 'Dashboard' },
@@ -179,7 +180,7 @@ export default function GroupLeaderboardPage() {
       // Fetch monthly leaderboard - get today's scores for current month instead of totals
       const year = now.getFullYear();
       const month = now.getMonth() + 1;
-      const today = now.toISOString().split('T')[0]; // Today's date in YYYY-MM-DD format
+      const today = getTodaysPSTDateString(); // Use PST date instead of UTC
       console.log(`Fetching monthly leaderboard for ${year}-${month} and group ${selectedGroup.id}...`);
       
       const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
@@ -207,13 +208,13 @@ export default function GroupLeaderboardPage() {
         console.error('Error fetching monthly scores:', monthlyError);
         setMonthly([]);
       } else {
-        // Process today's scores for display
+        // Process today's scores for display and sort by performance (best score first)
         const todayScores = monthlyScores?.map(score => ({
           id: score.user_id,
           display_name: (score.profiles as any)?.display_name || 'Unknown',
           avatar_url: (score.profiles as any)?.avatar_url,
           todayScore: score.raw_score // This will be the number of attempts (1-7)
-        })) || [];
+        })).sort((a, b) => a.todayScore - b.todayScore) || []; // Sort by best performance
         
         console.log('Today\'s scores for monthly leaderboard:', todayScores);
         setMonthly(todayScores);
@@ -342,7 +343,7 @@ export default function GroupLeaderboardPage() {
                 <p className="text-[hsl(var(--muted-foreground))]">No scores today yet.</p>
               </div>
             ) : (
-              monthly.slice(0, 5).map((player, idx) => {
+              monthly.map((player, idx) => { // Removed .slice(0, 5) to show all scores
                 const pos = idx + 1;
                 const nameClass = idx < 3 ? 'text-[#6aaa64] font-semibold' : 'text-[hsl(var(--foreground))]';
                 return (
