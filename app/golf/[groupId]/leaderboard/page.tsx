@@ -16,7 +16,6 @@ const menuItems = [
   { href: (groupId: string) => `/golf/${groupId}/submit`, label: 'Submit Score' },
   { href: () => '/golf/profile', label: 'Player Card' },
   { href: () => '/golf/clubhouse', label: 'Clubhouse' },
-  { href: () => '/golf/admin', label: 'Admin Center' },
 ];
 
 function BurgerMenu({ groupId }: { groupId: string }) {
@@ -306,7 +305,7 @@ export default function GroupLeaderboardPage() {
                   <div key={player.id} className="flex items-center py-4 px-2 bg-[hsl(var(--muted))] rounded-xl my-2 shadow-sm">
                     <div className="w-10 text-left font-bold text-base md:text-lg">{pos}</div>
                     <div className="flex-1 flex items-center pl-2">
-                      <Link href="/golf/profile" className="flex items-center hover:opacity-80 transition-opacity">
+                      <Link href={player.id === user?.id ? "/golf/profile" : `/golf/player?userId=${player.id}`} className="flex items-center hover:opacity-80 transition-opacity">
                         <UserAvatar 
                           avatarUrl={player.avatar_url}
                           displayName={player.display_name}
@@ -350,7 +349,7 @@ export default function GroupLeaderboardPage() {
                   <div key={player.id} className="flex items-center py-3 px-2 bg-[hsl(var(--muted))] rounded-lg">
                     <div className="w-8 text-left font-bold text-sm">{pos}</div>
                     <div className="flex-1 flex items-center pl-2">
-                      <Link href="/golf/profile" className="flex items-center hover:opacity-80 transition-opacity">
+                      <Link href={player.id === user?.id ? "/golf/profile" : `/golf/player?userId=${player.id}`} className="flex items-center hover:opacity-80 transition-opacity">
                         <UserAvatar 
                           avatarUrl={player.avatar_url}
                           displayName={player.display_name}

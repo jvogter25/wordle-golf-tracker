@@ -16,7 +16,6 @@ const menuItems = [
   { href: (groupId: string) => `/golf/${groupId}/submit`, label: 'Submit Score' },
   { href: () => '/golf/profile', label: 'Player Card' },
   { href: () => '/golf/clubhouse', label: 'Clubhouse' },
-  { href: () => '/golf/admin', label: 'Admin Center' },
 ];
 
 function BurgerMenu({ groupId }: { groupId: string }) {
@@ -150,12 +149,13 @@ export default function MonthlyLeaderboardPage() {
           }
           
           const userData = userTotals.get(userId);
-          // Use raw_score directly (total attempts for the month)
-          userData.totalScore += score.raw_score || 0;
+          // Calculate golf score (relative to par of 4)
+          const golfScore = (score.raw_score || 4) - 4;
+          userData.totalScore += golfScore;
           userData.gamesPlayed += 1;
           userData.scores.push({
             date: score.puzzle_date,
-            golf_score: score.raw_score,
+            golf_score: golfScore,
             attempts: score.raw_score
           });
         });
@@ -177,8 +177,8 @@ export default function MonthlyLeaderboardPage() {
   }, [supabase, selectedGroup]);
 
   const formatScore = (score: number): string => {
-    // For raw scores, just show the number directly
-    return score.toString();
+    if (score === 0) return 'E';
+    return score > 0 ? `+${score}` : score.toString();
   };
 
   if (!user) {
@@ -299,20 +299,22 @@ export default function MonthlyLeaderboardPage() {
                       </div>
                     </div>
                     <div className="flex-1 flex items-center">
-                      <UserAvatar 
-                        avatarUrl={player.avatar_url}
-                        displayName={player.display_name}
-                        size="md"
-                        className="border-2 border-[hsl(var(--primary))] mr-3"
-                      />
-                      <div className="flex flex-col justify-center">
-                        <span className={`text-base md:text-lg ${nameClass}`} style={{lineHeight: '1.1'}}>
-                          {player.display_name}
-                        </span>
-                        {isCurrentUser && (
-                          <span className="text-xs text-[#6aaa64] font-semibold mt-0.5">You</span>
-                        )}
-                      </div>
+                      <Link href={isCurrentUser ? "/golf/profile" : `/golf/player?userId=${player.id}`} className="flex items-center hover:opacity-80 transition-opacity">
+                        <UserAvatar 
+                          avatarUrl={player.avatar_url}
+                          displayName={player.display_name}
+                          size="md"
+                          className="border-2 border-[hsl(var(--primary))] mr-3"
+                        />
+                        <div className="flex flex-col justify-center">
+                          <span className={`text-base md:text-lg ${nameClass} hover:underline`} style={{lineHeight: '1.1'}}>
+                            {player.display_name}
+                          </span>
+                          {isCurrentUser && (
+                            <span className="text-xs text-[#6aaa64] font-semibold mt-0.5">You</span>
+                          )}
+                        </div>
+                      </Link>
                     </div>
                     <div className="w-20 text-center">
                       <span className="text-sm font-semibold">{player.gamesPlayed}</span>

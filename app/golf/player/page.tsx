@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getUserGroups } from '../../../lib/groups';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
@@ -27,6 +28,11 @@ function WordleHeader({ label }: { label: string }) {
 
 export default function PlayerPage() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const viewingUserId = searchParams.get('userId');
+  const isViewingOtherUser = viewingUserId && viewingUserId !== user?.id;
+  const targetUserId = viewingUserId || user?.id;
+  
   const [profile, setProfile] = useState<any>(null);
   const [handicap, setHandicap] = useState(0);
   const [groups, setGroups] = useState<any[]>([]);
@@ -35,22 +41,22 @@ export default function PlayerPage() {
   const supabase = createClientComponentClient();
 
   useEffect(() => {
-    console.log('🔄 useEffect triggered, user:', user?.email || 'null');
-    if (user) {
+    console.log('🔄 useEffect triggered, user:', user?.email || 'null', 'viewingUserId:', viewingUserId);
+    if (user && targetUserId) {
       fetchPlayerData();
     }
-  }, [user]);
+  }, [user, viewingUserId]);
 
   const fetchPlayerData = async () => {
     try {
-      console.log('🔍 Starting fetchPlayerData...');
+      console.log('🔍 Starting fetchPlayerData for userId:', targetUserId);
       
       // Fetch profile
       console.log('📋 Fetching profile data...');
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user?.id)
+        .eq('id', targetUserId)
         .single();
 
       if (profileData) {
@@ -65,7 +71,7 @@ export default function PlayerPage() {
       const { data: leaderboardData, error: handicapError } = await supabase.rpc('get_all_time_leaderboard');
       if (!handicapError && leaderboardData) {
         console.log('✅ Handicap RPC completed successfully');
-        const userHandicap = leaderboardData.find((player: any) => player.id === user?.id);
+        const userHandicap = leaderboardData.find((player: any) => player.id === targetUserId);
         if (userHandicap) {
           console.log('✅ User handicap found:', userHandicap.handicap);
           setHandicap(userHandicap.handicap || 0);
@@ -76,18 +82,20 @@ export default function PlayerPage() {
         console.log('❌ Handicap RPC failed:', handicapError);
       }
 
-      // Fetch groups
-      console.log('👥 Fetching groups data...');
-      const groupsData = await getUserGroups(supabase);
-      console.log('✅ Groups data loaded:', groupsData?.length || 0, 'groups');
-      setGroups(groupsData || []);
+      // Fetch groups (only for current user, not for other users)
+      if (!isViewingOtherUser) {
+        console.log('👥 Fetching groups data...');
+        const groupsData = await getUserGroups(supabase);
+        console.log('✅ Groups data loaded:', groupsData?.length || 0, 'groups');
+        setGroups(groupsData || []);
+      }
 
       // Fetch basic stats
       console.log('📊 Fetching scores for stats...');
       const { data: scoresData } = await supabase
         .from('scores')
         .select('*')
-        .eq('user_id', user?.id);
+        .eq('user_id', targetUserId);
 
       if (scoresData) {
         console.log('✅ Scores data loaded:', scoresData.length, 'scores');
@@ -153,12 +161,20 @@ export default function PlayerPage() {
         {/* Profile Section */}
         <div className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md mb-6">
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-16 h-16 bg-[#6aaa64] rounded-full flex items-center justify-center text-white font-bold text-xl">
-              {profile?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
-            </div>
+            {profile?.avatar_url ? (
+              <img 
+                src={profile.avatar_url} 
+                alt={profile?.display_name || 'Profile'} 
+                className="w-16 h-16 rounded-full object-cover border-2 border-[#6aaa64]"
+              />
+            ) : (
+              <div className="w-16 h-16 bg-[#6aaa64] rounded-full flex items-center justify-center text-white font-bold text-xl">
+                {profile?.display_name?.[0]?.toUpperCase() || 'U'}
+              </div>
+            )}
             <div>
               <h2 className="text-2xl font-bold text-[hsl(var(--foreground))]">
-                {profile?.display_name || user?.email}
+                {profile?.display_name || 'Unknown Player'}
               </h2>
               <p className="text-[hsl(var(--muted-foreground))]">
                 Handicap: {handicap > 0 ? `+${handicap.toFixed(1)}` : handicap.toFixed(1)}
@@ -201,8 +217,9 @@ export default function PlayerPage() {
         )}
 
         {/* Groups Section */}
-        <div className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md">
-          <h3 className="text-xl font-bold text-[hsl(var(--foreground))] mb-4">Your Groups</h3>
+        {!isViewingOtherUser && (
+          <div className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md">
+            <h3 className="text-xl font-bold text-[hsl(var(--foreground))] mb-4">Groups</h3>
           {groups.length > 0 ? (
             <div className="grid gap-3">
               {groups.map((group: any) => (
@@ -231,7 +248,8 @@ export default function PlayerPage() {
               </Link>
             </div>
           )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
