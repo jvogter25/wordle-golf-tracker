@@ -198,22 +198,22 @@ export default function GroupDashboard() {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 p-2 md:p-4">
-          <div className="max-w-4xl mx-auto">
+        <main className="flex-1 p-2 md:p-4 overflow-x-hidden">
+          <div className="max-w-4xl mx-auto w-full">
             <WordleHeader label="DASHBOARD" />
 
             {/* Group Info Banner */}
-            <div className="bg-[hsl(var(--card))] rounded-lg p-6 shadow-md mb-8">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-[hsl(var(--foreground))] mb-2">{selectedGroup.name}</h2>
+            <div className="bg-[hsl(var(--card))] rounded-lg p-4 md:p-6 shadow-md mb-6 md:mb-8">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-xl md:text-2xl font-bold text-[hsl(var(--foreground))] mb-2 truncate">{selectedGroup.name}</h2>
                   {selectedGroup.description && (
-                    <p className="text-[hsl(var(--muted-foreground))]">{selectedGroup.description}</p>
+                    <p className="text-[hsl(var(--muted-foreground))] text-sm md:text-base">{selectedGroup.description}</p>
                   )}
                 </div>
                 <Link 
                   href="/golf/clubhouse" 
-                  className="bg-[#6aaa64] text-white px-4 py-2 rounded-lg hover:bg-[#599a5b] transition font-semibold"
+                  className="bg-[#6aaa64] text-white px-3 md:px-4 py-2 rounded-lg hover:bg-[#599a5b] transition font-semibold text-sm md:text-base whitespace-nowrap"
                 >
                   Switch Groups
                 </Link>
@@ -221,26 +221,26 @@ export default function GroupDashboard() {
             </div>
 
             {/* Quick Actions */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-12">
-              <Link href={`/golf/${groupId}/submit`} className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md hover:shadow-lg transition">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-12">
+              <Link href={`/golf/${groupId}/submit`} className="bg-[hsl(var(--card))] p-4 md:p-6 rounded-lg shadow-md hover:shadow-lg transition">
                 <div className="text-3xl mb-4">📊</div>
                 <h3 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-2">Submit Score</h3>
                 <p className="text-[hsl(var(--muted-foreground))]">Record today's Wordle result</p>
               </Link>
               
-              <Link href={`/golf/${groupId}/leaderboard`} className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md hover:shadow-lg transition">
+              <Link href={`/golf/${groupId}/leaderboard`} className="bg-[hsl(var(--card))] p-4 md:p-6 rounded-lg shadow-md hover:shadow-lg transition">
                 <div className="text-3xl mb-4">🏆</div>
                 <h3 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-2">Leaderboard</h3>
                 <p className="text-[hsl(var(--muted-foreground))]">View group rankings</p>
               </Link>
               
-              <Link href={`/golf/${groupId}/tournaments`} className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md hover:shadow-lg transition">
+              <Link href={`/golf/${groupId}/tournaments`} className="bg-[hsl(var(--card))] p-4 md:p-6 rounded-lg shadow-md hover:shadow-lg transition">
                 <div className="text-3xl mb-4">🎂</div>
                 <h3 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-2">Tournaments</h3>
                 <p className="text-[hsl(var(--muted-foreground))]">Birthday tournaments</p>
               </Link>
               
-              <Link href="/golf/profile" className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md hover:shadow-lg transition">
+              <Link href="/golf/profile" className="bg-[hsl(var(--card))] p-4 md:p-6 rounded-lg shadow-md hover:shadow-lg transition">
                 <div className="text-3xl mb-4">👤</div>
                 <h3 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-2">Player Card</h3>
                 <p className="text-[hsl(var(--muted-foreground))]">Manage your profile</p>
@@ -248,33 +248,33 @@ export default function GroupDashboard() {
             </div>
 
             {/* Features Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 mb-12">
-              <div className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 mb-8 md:mb-12">
+              <div className="bg-[hsl(var(--card))] p-4 md:p-6 rounded-lg shadow-md">
                 <div className="text-3xl mb-4">⛳</div>
                 <h3 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-2">USGA Golf Scoring</h3>
                 <p className="text-[hsl(var(--muted-foreground))]">Convert Wordle attempts to authentic golf scores with eagles, birdies, and bogeys</p>
               </div>
-              <div className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md">
+              <div className="bg-[hsl(var(--card))] p-4 md:p-6 rounded-lg shadow-md">
                 <div className="text-3xl mb-4">🏆</div>
                 <h3 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-2">Major Tournaments</h3>
                 <p className="text-[hsl(var(--muted-foreground))]">Four annual championships matching real golf majors with cuts and leaderboards</p>
               </div>
-              <div className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md">
+              <div className="bg-[hsl(var(--card))] p-4 md:p-6 rounded-lg shadow-md">
                 <div className="text-3xl mb-4">🎂</div>
                 <h3 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-2">Birthday Tournaments</h3>
                 <p className="text-[hsl(var(--muted-foreground))]">Personal celebration tournaments with stroke advantages for birthday players</p>
               </div>
-              <div className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md">
+              <div className="bg-[hsl(var(--card))] p-4 md:p-6 rounded-lg shadow-md">
                 <div className="text-3xl mb-4">📊</div>
                 <h3 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-2">Handicap System</h3>
                 <p className="text-[hsl(var(--muted-foreground))]">Fair competition with automatic USGA-style handicap calculations</p>
               </div>
-              <div className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md">
+              <div className="bg-[hsl(var(--card))] p-4 md:p-6 rounded-lg shadow-md">
                 <div className="text-3xl mb-4">👨‍👩‍👧‍👦</div>
                 <h3 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-2">Family Groups</h3>
                 <p className="text-[hsl(var(--muted-foreground))]">Private family competitions with secure invite codes</p>
               </div>
-              <div className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md">
+              <div className="bg-[hsl(var(--card))] p-4 md:p-6 rounded-lg shadow-md">
                 <div className="text-3xl mb-4">📱</div>
                 <h3 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-2">Easy Score Entry</h3>
                 <p className="text-[hsl(var(--muted-foreground))]">Quick score submission with easy online upload</p>
@@ -282,7 +282,7 @@ export default function GroupDashboard() {
             </div>
 
             {/* How It Works Section */}
-            <div className="bg-[hsl(var(--card))] rounded-lg p-8 shadow-md mb-12">
+            <div className="bg-[hsl(var(--card))] rounded-lg p-4 md:p-8 shadow-md mb-8 md:mb-12">
               <h2 className="text-2xl font-bold text-[hsl(var(--foreground))] mb-6 text-center">How It Works</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                 <div className="text-center">
