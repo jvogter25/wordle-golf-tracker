@@ -8,7 +8,7 @@ import { useGroup } from '../../../../contexts/GroupContext';
 import { useAuth } from '../../../../contexts/AuthContext';
 import NavigationAvatar from '../../../../components/NavigationAvatar';
 import UserAvatar from '../../../../components/UserAvatar';
-import { getTodaysPSTDateString } from '@/lib/wordle-utils';
+import { getTodaysPSTDateString, getTodaysPuzzleNumber } from '@/lib/wordle-utils';
 
 const menuItems = [
   { href: (groupId: string) => `/golf/${groupId}/dashboard`, label: 'Dashboard' },
@@ -177,22 +177,17 @@ export default function GroupLeaderboardPage() {
         setAllTime(allTimeWithTotals);
       }
 
-      // Fetch monthly leaderboard - get today's scores for current month instead of totals
-      const year = now.getFullYear();
-      const month = now.getMonth() + 1;
-      const today = getTodaysPSTDateString(); // Use PST date instead of UTC
-      console.log(`Fetching monthly leaderboard for ${year}-${month} and group ${selectedGroup.id}...`);
+      // Fetch monthly leaderboard - get today's scores by puzzle number instead of date
+      const currentPuzzleNumber = getTodaysPuzzleNumber();
+      console.log(`Fetching today's scores for puzzle number ${currentPuzzleNumber} and group ${selectedGroup.id}...`);
       
-      const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
-      const endDate = new Date(year, month, 0).toISOString().split('T')[0];
-      
-      // Get today's scores for users in this month
-      const { data: monthlyScores, error: monthlyError } = await supabase
+      // Get today's scores by puzzle number - much simpler and more accurate
+      const { data: todayScores, error: todayError } = await supabase
         .from('scores')
         .select(`
           user_id,
           raw_score,
-          puzzle_date,
+          puzzle_number,
           profiles (
             id,
             display_name,
@@ -200,24 +195,22 @@ export default function GroupLeaderboardPage() {
           )
         `)
         .eq('group_id', selectedGroup.id)
-        .gte('puzzle_date', startDate)
-        .lte('puzzle_date', endDate)
-        .eq('puzzle_date', today); // Only get today's scores
+        .eq('puzzle_number', currentPuzzleNumber); // Filter by today's puzzle number
 
-      if (monthlyError) {
-        console.error('Error fetching monthly scores:', monthlyError);
+      if (todayError) {
+        console.error('Error fetching today\'s scores:', todayError);
         setMonthly([]);
       } else {
         // Process today's scores for display and sort by performance (best score first)
-        const todayScores = monthlyScores?.map(score => ({
+        const processedScores = todayScores?.map(score => ({
           id: score.user_id,
           display_name: (score.profiles as any)?.display_name || 'Unknown',
           avatar_url: (score.profiles as any)?.avatar_url,
           todayScore: score.raw_score // This will be the number of attempts (1-7)
         })).sort((a, b) => a.todayScore - b.todayScore) || []; // Sort by best performance
         
-        console.log('Today\'s scores for monthly leaderboard:', todayScores);
-        setMonthly(todayScores);
+        console.log('Today\'s scores by puzzle number:', processedScores);
+        setMonthly(processedScores);
       }
       
       setLoading(false);
