@@ -17,7 +17,6 @@ const menuItems = [
   { href: (groupId: string) => `/golf/${groupId}/submit`, label: 'Submit Score' },
   { href: () => '/golf/profile', label: 'Player Card' },
   { href: () => '/golf/clubhouse', label: 'Clubhouse' },
-  { href: () => '/golf/admin', label: 'Admin Center' },
 ];
 
 function BurgerMenu({ groupId }: { groupId: string }) {

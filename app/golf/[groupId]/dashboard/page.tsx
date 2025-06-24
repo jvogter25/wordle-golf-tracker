@@ -9,14 +9,13 @@ import { useGroup } from '../../../../contexts/GroupContext';
 import { useAuth } from '../../../../contexts/AuthContext';
 import NavigationAvatar from '../../../../components/NavigationAvatar';
 
-const navLinks = [
+const menuItems = [
   { href: (groupId: string) => `/golf/${groupId}/dashboard`, label: 'Dashboard' },
   { href: (groupId: string) => `/golf/${groupId}/leaderboard`, label: 'Leaderboard' },
   { href: (groupId: string) => `/golf/${groupId}/tournaments`, label: 'Tournaments' },
   { href: (groupId: string) => `/golf/${groupId}/submit`, label: 'Submit Score' },
   { href: () => '/golf/profile', label: 'Player Card' },
   { href: () => '/golf/clubhouse', label: 'Clubhouse' },
-  { href: () => '/golf/admin', label: 'Admin Center' },
 ];
 
 function BurgerMenu({ groupId }: { groupId: string }) {
@@ -32,7 +31,7 @@ function BurgerMenu({ groupId }: { groupId: string }) {
       </button>
       {open && (
         <div className="absolute right-0 top-12 w-48 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg shadow-lg z-50 flex flex-col">
-          {navLinks.map(link => (
+          {menuItems.map(link => (
             <Link
               key={link.label}
               href={link.href(groupId)}

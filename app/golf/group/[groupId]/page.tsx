@@ -4,14 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 
-const navLinks = [
-  { href: '/golf/homepage', label: 'Home' },
-  { href: '/golf/leaderboard', label: 'Leaderboard' },
-  { href: '/golf/player', label: 'Player Card' },
-  { href: '/golf/tournaments', label: 'Tournaments' },
-  { href: '/golf/submit', label: 'Submit Score' },
+const menuItems = [
+  { href: '/golf/profile', label: 'Player Card' },
+  { href: '/golf/homepage', label: 'Home Dashboard' },
   { href: '/golf/clubhouse', label: 'Clubhouse' },
-  { href: '/golf/clubhouse/admin-working', label: 'Admin Center' },
 ];
 
 function BurgerMenu() {
@@ -27,7 +23,7 @@ function BurgerMenu() {
       </button>
       {open && (
         <div className="absolute right-0 top-12 w-48 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg shadow-lg z-50 flex flex-col">
-          {navLinks.map(link => (
+          {menuItems.map(link => (
             <Link
               key={link.href}
               href={link.href}
