@@ -42,16 +42,19 @@ export async function uploadAvatar(
       return { success: false, error: `Upload failed: ${uploadError.message}` }
     }
 
-    // Get public URL
+    // Get public URL with cache busting timestamp
     const { data: urlData } = supabase.storage
       .from('avatars')
       .getPublicUrl(filePath)
+
+    // Add cache busting parameter to force browser to reload image
+    const cacheBustUrl = `${urlData.publicUrl}?t=${Date.now()}`
 
     // Update profile with new avatar URL
     const { error: updateError } = await supabase
       .from('profiles')
       .update({ 
-        avatar_url: urlData.publicUrl,
+        avatar_url: cacheBustUrl,
         updated_at: new Date().toISOString()
       })
       .eq('id', userId)
@@ -61,7 +64,7 @@ export async function uploadAvatar(
       return { success: false, error: `Profile update failed: ${updateError.message}` }
     }
 
-    return { success: true, avatarUrl: urlData.publicUrl }
+    return { success: true, avatarUrl: cacheBustUrl }
   } catch (error: any) {
     console.error('Avatar upload error:', error)
     return { success: false, error: error.message }

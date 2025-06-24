@@ -321,7 +321,7 @@ export default function GlobalProfilePage() {
         setLoadingTimeout(true);
         setLoading(false);
       }
-    }, 25000);
+    }, 60000);
 
     if (user && availableGroups.length > 0) {
       fetchProfile();
@@ -398,9 +398,16 @@ export default function GlobalProfilePage() {
       const result = await uploadAvatar(supabase, user.id, file);
       
       if (result.success && result.avatarUrl) {
+        // Update profile state with new avatar URL
         setProfile(prev => prev ? { ...prev, avatar_url: result.avatarUrl } : null);
         setMessage('Profile picture updated successfully!');
         setMessageType('success');
+        
+        // Force a small delay to ensure the image loads
+        setTimeout(() => {
+          // Clear the file input to allow re-uploading the same file if needed
+          event.target.value = '';
+        }, 100);
       } else {
         throw new Error(result.error || 'Failed to upload avatar');
       }
@@ -513,6 +520,7 @@ export default function GlobalProfilePage() {
               <div className="flex flex-col md:flex-row items-start gap-6 mb-6">
                 <div className="flex flex-col items-center w-full md:w-auto">
                   <UserAvatar 
+                    key={profile?.avatar_url || 'no-avatar'} 
                     avatarUrl={profile?.avatar_url}
                     displayName={profile?.display_name || 'User'}
                     size="xl"
