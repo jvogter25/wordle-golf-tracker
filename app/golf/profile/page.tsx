@@ -510,8 +510,8 @@ export default function GlobalProfilePage() {
           <div className="space-y-6">
             {/* Profile Info */}
             <div className="bg-[hsl(var(--card))] rounded-lg p-6 border border-[hsl(var(--border))]">
-              <div className="flex items-start gap-6 mb-6">
-                <div className="flex flex-col items-center">
+              <div className="flex flex-col md:flex-row items-start gap-6 mb-6">
+                <div className="flex flex-col items-center w-full md:w-auto">
                   <UserAvatar 
                     avatarUrl={profile?.avatar_url}
                     displayName={profile?.display_name || 'User'}
@@ -542,13 +542,13 @@ export default function GlobalProfilePage() {
                   </div>
                 </div>
                 
-                <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-[hsl(var(--foreground))] mb-2">
+                <div className="flex-1 w-full">
+                  <h2 className="text-2xl font-bold text-[hsl(var(--foreground))] mb-2 text-center md:text-left">
                     {profile?.display_name || 'User'}
                   </h2>
-                  <p className="text-[hsl(var(--muted-foreground))] mb-4">{profile?.email}</p>
+                  <p className="text-[hsl(var(--muted-foreground))] mb-4 text-center md:text-left">{profile?.email}</p>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 max-w-md mx-auto md:mx-0">
                     <div className="bg-[hsl(var(--muted))] rounded-lg p-3">
                       <div className="flex items-center gap-2 mb-1">
                         <Trophy size={16} className="text-[#6aaa64]" />

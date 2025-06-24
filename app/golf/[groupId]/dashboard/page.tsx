@@ -198,7 +198,7 @@ export default function GroupDashboard() {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 p-4">
+        <main className="flex-1 p-2 md:p-4">
           <div className="max-w-4xl mx-auto">
             <WordleHeader label="DASHBOARD" />
 
@@ -221,7 +221,7 @@ export default function GroupDashboard() {
             </div>
 
             {/* Quick Actions */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-12">
               <Link href={`/golf/${groupId}/submit`} className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md hover:shadow-lg transition">
                 <div className="text-3xl mb-4">📊</div>
                 <h3 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-2">Submit Score</h3>
@@ -248,7 +248,7 @@ export default function GroupDashboard() {
             </div>
 
             {/* Features Grid */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 mb-12">
               <div className="bg-[hsl(var(--card))] p-6 rounded-lg shadow-md">
                 <div className="text-3xl mb-4">⛳</div>
                 <h3 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-2">USGA Golf Scoring</h3>
@@ -284,7 +284,7 @@ export default function GroupDashboard() {
             {/* How It Works Section */}
             <div className="bg-[hsl(var(--card))] rounded-lg p-8 shadow-md mb-12">
               <h2 className="text-2xl font-bold text-[hsl(var(--foreground))] mb-6 text-center">How It Works</h2>
-              <div className="grid md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                 <div className="text-center">
                   <div className="bg-[hsl(var(--muted))] w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
                     <span className="text-[#6aaa64] font-bold">1</span>
