@@ -242,22 +242,54 @@ export default function ClubhouseAdminPage() {
   };
 
   const updateScore = async () => {
-    if (!selectedMember || !selectedDate || !newScore) {
-      toast.error('Please fill in all fields');
+    if (!selectedMember || !selectedDate || !newScore || !selectedGroup) {
+      toast.error('Please fill in all fields and select a group');
       return;
     }
 
+    const rawScore = parseInt(newScore);
+    
+    // Calculate puzzle number based on date (Wordle started June 19, 2021)
+    const puzzleDate = new Date(selectedDate);
+    const wordleStart = new Date('2021-06-19');
+    const diffTime = puzzleDate.getTime() - wordleStart.getTime();
+    const puzzleNumber = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    // Map raw score to golf score
+    const getGolfScore = (score: number) => {
+      const scoreMap: { [key: number]: string } = {
+        1: 'Hole-in-One',
+        2: 'Eagle', 
+        3: 'Birdie',
+        4: 'Par',
+        5: 'Bogey',
+        6: 'Double Bogey',
+        7: 'Failed'
+      };
+      return scoreMap[score] || 'Failed';
+    };
+
+    const scoreData = {
+      user_id: selectedMember,
+      group_id: selectedGroup,
+      puzzle_date: selectedDate,
+      puzzle_number: puzzleNumber,
+      raw_score: rawScore,
+      attempts: rawScore,
+      golf_score: getGolfScore(rawScore),
+      submitted_by_admin: true,
+      updated_at: new Date().toISOString()
+    };
+
     const { error } = await supabase
       .from('scores')
-      .upsert({
-        user_id: selectedMember,
-        puzzle_date: selectedDate,
-        raw_score: parseInt(newScore),
-        attempts: parseInt(newScore) // Assuming raw_score equals attempts for simplicity
+      .upsert(scoreData, {
+        onConflict: 'user_id,group_id,puzzle_number'
       });
 
     if (error) {
-      toast.error('Error updating score');
+      console.error('Error updating score:', error);
+      toast.error(`Error updating score: ${error.message}`);
       return;
     }
 
@@ -710,6 +742,20 @@ export default function ClubhouseAdminPage() {
           <h2 className="text-lg font-semibold mb-4">Edit Score</h2>
           <div className="space-y-4">
             <div>
+              <label className="block text-sm font-medium mb-2">Select Group</label>
+              <select
+                value={selectedGroup}
+                onChange={(e) => setSelectedGroup(e.target.value)}
+                className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-md"
+              >
+                <option value="">Select Group</option>
+                {groups.map(group => (
+                  <option key={group.id} value={group.id}>{group.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
               <label className="block text-sm font-medium mb-2">Select Member</label>
               <select
                 value={selectedMember}
@@ -734,16 +780,21 @@ export default function ClubhouseAdminPage() {
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-2">Score</label>
-              <input
-                type="number"
-                placeholder="Enter score"
+              <label className="block text-sm font-medium mb-2">Score (1-7)</label>
+              <select
                 value={newScore}
                 onChange={(e) => setNewScore(e.target.value)}
-                min="1"
-                max="6"
                 className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-md"
-              />
+              >
+                <option value="">Select score</option>
+                <option value="1">1 - ⛳️ Hole-in-One</option>
+                <option value="2">2 - 🦅 Eagle</option>
+                <option value="3">3 - 🐦‍⬛ Birdie</option>
+                <option value="4">4 - 🏌️ Par</option>
+                <option value="5">5 - 😬 Bogey</option>
+                <option value="6">6 - 😱 Double Bogey</option>
+                <option value="7">7 - ❌ Failed</option>
+              </select>
             </div>
             
             <button
