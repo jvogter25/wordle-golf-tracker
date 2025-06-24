@@ -7,6 +7,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useGroup } from '../../../../contexts/GroupContext';
 import { useAuth } from '../../../../contexts/AuthContext';
 import NavigationAvatar from '../../../../components/NavigationAvatar';
+import { getTodaysPuzzleNumber } from '../../../../lib/wordle-utils';
 
 const menuItems = [
   { href: (groupId: string) => `/golf/${groupId}/dashboard`, label: 'Dashboard' },
@@ -96,15 +97,11 @@ export default function GroupSubmitScorePage() {
 
       const today = new Date().toISOString().split('T')[0];
       
-      // Calculate today's puzzle number (Wordle started on June 19, 2021 as puzzle #1)
-      const wordleStart = new Date('2021-06-19');
-      const todayDate = new Date();
-      const diffTime = todayDate.getTime() - wordleStart.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      const calculatedPuzzleNumber = diffDays;
-      
-      setTodaysPuzzleNumber(calculatedPuzzleNumber);
-      setPuzzleNumber(calculatedPuzzleNumber.toString());
+          // Calculate today's puzzle number using PST timezone
+    const calculatedPuzzleNumber = getTodaysPuzzleNumber();
+
+    setTodaysPuzzleNumber(calculatedPuzzleNumber);
+    setPuzzleNumber(calculatedPuzzleNumber.toString());
 
       // Check if user has already submitted for today's puzzle number in this group
       const { data: existingSubmission, error } = await supabase

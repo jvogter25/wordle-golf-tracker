@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { toast } from 'sonner';
 import Navigation from '../../../../components/Navigation';
+import { getTodaysPuzzleNumber } from '../../../../lib/wordle-utils';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -187,12 +188,8 @@ export default function ClubhouseAdminPage() {
       }
     };
     
-    // Setup today's puzzle number
-    const wordleStart = new Date('2021-06-19');
-    const todayDate = new Date();
-    const diffTime = todayDate.getTime() - wordleStart.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const calculatedPuzzleNumber = diffDays;
+    // Setup today's puzzle number using PST timezone
+    const calculatedPuzzleNumber = getTodaysPuzzleNumber();
     
     setTodaysPuzzleNumber(calculatedPuzzleNumber);
     setPuzzleNumber(calculatedPuzzleNumber.toString());

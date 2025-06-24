@@ -7,6 +7,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useAuth } from '../../../../../contexts/AuthContext';
 import { useGroup } from '../../../../../contexts/GroupContext';
 import Navigation from '../../../../../components/Navigation';
+import { getTodaysPuzzleNumber } from '../../../../../lib/wordle-utils';
 
 function WordleHeader({ label }: { label: string }) {
   const colors = ['bg-[#6aaa64]', 'bg-[#c9b458]', 'bg-[#787c7e]'];
@@ -76,17 +77,13 @@ export default function AdminSubmitScorePage() {
       }
     };
 
-    const setupPuzzleNumber = () => {
-      // Calculate today's puzzle number (Wordle started on June 19, 2021 as puzzle #1)
-      const wordleStart = new Date('2021-06-19');
-      const todayDate = new Date();
-      const diffTime = todayDate.getTime() - wordleStart.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      const calculatedPuzzleNumber = diffDays;
-      
-      setTodaysPuzzleNumber(calculatedPuzzleNumber);
-      setPuzzleNumber(calculatedPuzzleNumber.toString());
-    };
+      const setupPuzzleNumber = () => {
+    // Calculate today's puzzle number using PST timezone
+    const calculatedPuzzleNumber = getTodaysPuzzleNumber();
+    
+    setTodaysPuzzleNumber(calculatedPuzzleNumber);
+    setPuzzleNumber(calculatedPuzzleNumber.toString());
+  };
 
     fetchGroupMembers();
     setupPuzzleNumber();
