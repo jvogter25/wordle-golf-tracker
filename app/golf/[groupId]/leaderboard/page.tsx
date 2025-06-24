@@ -318,7 +318,7 @@ export default function GroupLeaderboardPage() {
                         </div>
                       </Link>
                     </div>
-                    <div className="w-16 text-right text-lg font-bold">{player.totalScore > 0 ? `+${player.totalScore}` : player.totalScore}</div>
+                    <div className="w-16 text-right text-lg font-bold">{formatScore(player.totalScore)}</div>
                   </div>
                 );
               })
