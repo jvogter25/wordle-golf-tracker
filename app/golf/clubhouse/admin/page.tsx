@@ -17,8 +17,9 @@ export default function ClubhouseAdminPage() {
   const [selectedGroup, setSelectedGroup] = useState("");
   const [newGroupCode, setNewGroupCode] = useState("");
   const [selectedMember, setSelectedMember] = useState("");
-  const [selectedDate, setSelectedDate] = useState("");
+  const [puzzleNumber, setPuzzleNumber] = useState("");
   const [newScore, setNewScore] = useState("");
+  const [todaysPuzzleNumber, setTodaysPuzzleNumber] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState<string[]>([]);
   const supabase = createClientComponentClient();
@@ -185,6 +186,17 @@ export default function ClubhouseAdminPage() {
         setLoading(false);
       }
     };
+    
+    // Setup today's puzzle number
+    const wordleStart = new Date('2021-06-19');
+    const todayDate = new Date();
+    const diffTime = todayDate.getTime() - wordleStart.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const calculatedPuzzleNumber = diffDays;
+    
+    setTodaysPuzzleNumber(calculatedPuzzleNumber);
+    setPuzzleNumber(calculatedPuzzleNumber.toString());
+    
     fetchData();
   }, [supabase]);
 
@@ -242,65 +254,82 @@ export default function ClubhouseAdminPage() {
   };
 
   const updateScore = async () => {
-    if (!selectedMember || !selectedDate || !newScore || !selectedGroup) {
+    if (!selectedMember || !puzzleNumber || !newScore || !selectedGroup) {
       toast.error('Please fill in all fields and select a group');
       return;
     }
 
     const rawScore = parseInt(newScore);
-    
-    // Calculate puzzle number based on date (Wordle started June 19, 2021)
-    const puzzleDate = new Date(selectedDate);
-    const wordleStart = new Date('2021-06-19');
-    const diffTime = puzzleDate.getTime() - wordleStart.getTime();
-    const puzzleNumber = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    const puzzleNum = parseInt(puzzleNumber);
 
-    // Map raw score to golf score
-    const getGolfScore = (score: number) => {
-      const scoreMap: { [key: number]: string } = {
-        1: 'Hole-in-One',
-        2: 'Eagle', 
-        3: 'Birdie',
-        4: 'Par',
-        5: 'Bogey',
-        6: 'Double Bogey',
-        7: 'Failed'
-      };
-      return scoreMap[score] || 'Failed';
-    };
-
-    const scoreData = {
-      user_id: selectedMember,
-      group_id: selectedGroup,
-      puzzle_date: selectedDate,
-      puzzle_number: puzzleNumber,
-      raw_score: rawScore,
-      attempts: rawScore,
-      golf_score: getGolfScore(rawScore),
-      submitted_by_admin: true,
-      updated_at: new Date().toISOString()
-    };
-
-    const { error } = await supabase
-      .from('scores')
-      .upsert(scoreData, {
-        onConflict: 'user_id,group_id,puzzle_number'
-      });
-
-    if (error) {
-      console.error('Error updating score:', error);
-      toast.error(`Error updating score: ${error.message}`);
+    if (rawScore < 1 || rawScore > 7) {
+      toast.error('Score must be between 1 and 7 (7 for failed attempts)');
       return;
     }
 
-    toast.success('Score updated successfully!');
-    setSelectedMember("");
-    setSelectedDate("");
-    setNewScore("");
-    
-    // Refresh scores data
-    const { data: scoresData } = await supabase.from('scores').select('*').order('puzzle_date', { ascending: false });
-    setScores(scoresData || []);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Check if user has already submitted for this puzzle number
+      const { data: existingSubmission, error: checkError } = await supabase
+        .from('scores')
+        .select('id')
+        .eq('user_id', selectedMember)
+        .eq('group_id', selectedGroup)
+        .eq('puzzle_number', puzzleNum)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw checkError;
+      }
+
+      if (existingSubmission) {
+        // Update existing score (admin override)
+        const { error } = await supabase
+          .from('scores')
+          .update({
+            raw_score: rawScore,
+            attempts: rawScore,
+            golf_score: rawScore === 1 ? 'Hole-in-One' : rawScore === 2 ? 'Eagle' : rawScore === 3 ? 'Birdie' : rawScore === 4 ? 'Par' : rawScore === 5 ? 'Bogey' : rawScore === 6 ? 'Double Bogey' : 'Failed',
+            submitted_by_admin: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingSubmission.id);
+
+        if (error) throw error;
+        toast.success('Score updated successfully (admin override)!');
+      } else {
+        // Insert new score
+        const { error } = await supabase
+          .from('scores')
+          .insert({
+            user_id: selectedMember,
+            group_id: selectedGroup,
+            raw_score: rawScore,
+            puzzle_number: puzzleNum,
+            puzzle_date: today,
+            attempts: rawScore,
+            golf_score: rawScore === 1 ? 'Hole-in-One' : rawScore === 2 ? 'Eagle' : rawScore === 3 ? 'Birdie' : rawScore === 4 ? 'Par' : rawScore === 5 ? 'Bogey' : rawScore === 6 ? 'Double Bogey' : 'Failed',
+            submitted_by_admin: true
+          });
+
+        if (error) throw error;
+        toast.success('Score submitted successfully!');
+      }
+      
+      // Reset form
+      setSelectedMember("");
+      setPuzzleNumber("");
+      setNewScore("");
+      
+      // Refresh scores data
+      const { data: scoresData } = await supabase.from('scores').select('*').order('puzzle_date', { ascending: false });
+      setScores(scoresData || []);
+      
+    } catch (error: any) {
+      console.error('Error updating score:', error);
+      toast.error(`Error updating score: ${error.message}`);
+    }
   };
 
   const copyGroupCode = (code: string) => {
@@ -768,15 +797,22 @@ export default function ClubhouseAdminPage() {
                 ))}
               </select>
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium mb-2">Date</label>
+              <label className="block text-sm font-medium mb-2">Puzzle Number</label>
               <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
+                type="number"
+                value={puzzleNumber}
+                onChange={(e) => setPuzzleNumber(e.target.value)}
                 className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-md"
+                placeholder="e.g., 924"
+                min="1"
               />
+              {todaysPuzzleNumber && (
+                <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
+                  Today's puzzle is #{todaysPuzzleNumber}
+                </p>
+              )}
             </div>
             
             <div>
