@@ -31,9 +31,9 @@ function BurgerMenu({ selectedGroup }: { selectedGroup: any }) {
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition"
+        className="bg-[#6aaa64] text-white px-4 py-2 rounded-full font-bold shadow hover:bg-[#599a5b] transition"
       >
-        <Menu size={24} className="text-[hsl(var(--foreground))]" />
+        {open ? "Close" : "Menu"}
       </button>
       {open && (
         <div className="absolute right-0 top-12 w-48 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg shadow-lg z-50 flex flex-col">
