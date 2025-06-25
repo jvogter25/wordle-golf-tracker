@@ -38,11 +38,11 @@ function BurgerMenu({ context, groupId }: { context: 'global' | 'group'; groupId
   return (
     <div className="relative">
       <button
-        className="p-2 rounded-md bg-[hsl(var(--card))] border border-[hsl(var(--border))] shadow-md"
+        className="bg-[#6aaa64] text-white px-4 py-2 rounded-full font-bold shadow hover:bg-[#599a5b] transition"
         onClick={() => setOpen(!open)}
         aria-label="Open navigation menu"
       >
-        {open ? <X size={28} /> : <Menu size={28} />}
+        {open ? "Close" : "Menu"}
       </button>
       {open && (
         <div className="absolute right-0 top-12 w-48 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg shadow-lg z-50 flex flex-col">
