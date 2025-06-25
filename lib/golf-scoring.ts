@@ -101,8 +101,15 @@ export const parseWordleResult = (clipboardText: string): { attempts: number, da
 // Validate if submission is for current day (Pacific Time)
 export const isCurrentDaySubmission = (puzzleDate: string): boolean => {
   const today = new Date()
-  const pacificTime = new Date(today.toLocaleString("en-US", {timeZone: "America/Los_Angeles"}))
-  const todayStr = pacificTime.toISOString().split('T')[0]
+  const pstDateString = today.toLocaleDateString("en-US", {
+    timeZone: "America/Los_Angeles",
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  
+  const [month, day, year] = pstDateString.split('/');
+  const todayStr = `${year}-${month}-${day}`;
   
   return puzzleDate === todayStr
 } 

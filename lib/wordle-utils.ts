@@ -11,16 +11,26 @@
  */
 export function getTodaysPuzzleNumber(): number {
   // Base date: June 24, 2025 = Puzzle #1466 (correct Wordle number)
-  const baseDate = new Date('2025-06-24T00:00:00-08:00'); // PST
   const basePuzzleNumber = 1466;
   
-  // Get current PST time
+  // Get current time in PST and extract just the date
   const now = new Date();
-  const pstDate = new Date(now.toLocaleString("en-US", {timeZone: "America/Los_Angeles"}));
+  const pstDateString = now.toLocaleDateString("en-US", {
+    timeZone: "America/Los_Angeles",
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }); // Returns "MM/DD/YYYY" format
   
-  // Calculate days since base date (using PST)
-  const basePSTDate = new Date(baseDate.toLocaleString("en-US", {timeZone: "America/Los_Angeles"}));
-  const diffTime = pstDate.getTime() - basePSTDate.getTime();
+  // Parse PST date string to get clean date object
+  const [month, day, year] = pstDateString.split('/');
+  const pstDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  
+  // Base date as clean date object
+  const baseDate = new Date(2025, 5, 24); // June 24, 2025 (month is 0-indexed)
+  
+  // Calculate days difference
+  const diffTime = pstDate.getTime() - baseDate.getTime();
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   
   return basePuzzleNumber + diffDays;
@@ -32,15 +42,24 @@ export function getTodaysPuzzleNumber(): number {
  */
 export function getPuzzleNumberForDate(date: Date): number {
   // Base date: June 24, 2025 = Puzzle #1466 (correct Wordle number)
-  const baseDate = new Date('2025-06-24T00:00:00-08:00'); // PST
   const basePuzzleNumber = 1466;
   
-  // Convert input date to PST
-  const pstDate = new Date(date.toLocaleString("en-US", {timeZone: "America/Los_Angeles"}));
+  // Convert input date to PST date string, then to clean date object
+  const pstDateString = date.toLocaleDateString("en-US", {
+    timeZone: "America/Los_Angeles",
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
   
-  // Calculate days since base date (using PST)
-  const basePSTDate = new Date(baseDate.toLocaleString("en-US", {timeZone: "America/Los_Angeles"}));
-  const diffTime = pstDate.getTime() - basePSTDate.getTime();
+  const [month, day, year] = pstDateString.split('/');
+  const pstDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  
+  // Base date as clean date object
+  const baseDate = new Date(2025, 5, 24); // June 24, 2025 (month is 0-indexed)
+  
+  // Calculate days difference
+  const diffTime = pstDate.getTime() - baseDate.getTime();
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   
   return basePuzzleNumber + diffDays;
@@ -57,6 +76,22 @@ export function getTodaysPSTDateString(): string {
     month: '2-digit',
     day: '2-digit'
   });
+}
+
+/**
+ * Get today's PST date in YYYY-MM-DD format for database storage
+ */
+export function getTodaysPSTDate(): string {
+  const now = new Date();
+  const pstDateString = now.toLocaleDateString("en-US", {
+    timeZone: "America/Los_Angeles",
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  
+  const [month, day, year] = pstDateString.split('/');
+  return `${year}-${month}-${day}`;
 }
 
 /**

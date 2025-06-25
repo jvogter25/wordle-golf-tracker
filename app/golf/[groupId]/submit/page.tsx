@@ -7,7 +7,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useGroup } from '../../../../contexts/GroupContext';
 import { useAuth } from '../../../../contexts/AuthContext';
 import NavigationAvatar from '../../../../components/NavigationAvatar';
-import { getTodaysPuzzleNumber } from '../../../../lib/wordle-utils';
+import { getTodaysPuzzleNumber, getTodaysPSTDate } from '../../../../lib/wordle-utils';
 
 const menuItems = [
   { href: (groupId: string) => `/golf/${groupId}/dashboard`, label: 'Dashboard' },
@@ -95,7 +95,7 @@ export default function GroupSubmitScorePage() {
     const fetchTodaysInfo = async () => {
       if (!user || !selectedGroup) return;
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodaysPSTDate();
       
           // Calculate today's puzzle number using PST timezone
     const calculatedPuzzleNumber = getTodaysPuzzleNumber();
@@ -152,7 +152,7 @@ export default function GroupSubmitScorePage() {
     setMessage('');
 
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodaysPSTDate();
       
       // Check if user has already submitted for this puzzle number
       const { data: existingSubmission, error: checkError } = await supabase

@@ -57,8 +57,15 @@ export default function SubmitPage() {
   const getTodaysPuzzleDate = (): string => {
     // Get Pacific Time date (Wordle resets at midnight PT)
     const now = new Date()
-    const pacificTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Los_Angeles"}))
-    return pacificTime.toISOString().split('T')[0]
+    const pstDateString = now.toLocaleDateString("en-US", {
+      timeZone: "America/Los_Angeles",
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    
+    const [month, day, year] = pstDateString.split('/');
+    return `${year}-${month}-${day}`;
   }
 
   const submitScore = async (e: React.FormEvent) => {
